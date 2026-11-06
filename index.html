@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vim Simulator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="vim-panel">
+            <div class="vim-header">
+                <span class="mode-badge" id="mode-badge">NORMAL</span>
+                <span class="title-bar">vim_sim — 80x20</span>
+                <span class="cursor-pos" id="cursor-pos">Ln 1, Col 1</span>
+            </div>
+            <div class="terminal" id="terminal"></div>
+            <div class="status-line" id="status-line">
+                <span id="status-msg"></span>
+            </div>
+        </div>
+        <div class="cheatsheet">
+            <h2>Vim Cheatsheet</h2>
+            <div class="cheat-section">
+                <h3>Modes</h3>
+                <table>
+                    <tr><td><kbd>Esc</kbd></td><td>→ Normal mode</td></tr>
+                    <tr><td><kbd>i</kbd></td><td>Insert before cursor</td></tr>
+                    <tr><td><kbd>a</kbd></td><td>Append after cursor</td></tr>
+                    <tr><td><kbd>o</kbd></td><td>Open line below</td></tr>
+                    <tr><td><kbd>O</kbd></td><td>Open line above</td></tr>
+                </table>
+            </div>
+            <div class="cheat-section">
+                <h3>Movement</h3>
+                <table>
+                    <tr><td><kbd>h</kbd> / <kbd>←</kbd> / <kbd>⌫</kbd></td><td>Left</td></tr>
+                    <tr><td><kbd>j</kbd> / <kbd>↓</kbd></td><td>Down</td></tr>
+                    <tr><td><kbd>k</kbd> / <kbd>↑</kbd></td><td>Up</td></tr>
+                    <tr><td><kbd>l</kbd> / <kbd>→</kbd></td><td>Right</td></tr>
+                    <tr><td><kbd>w</kbd></td><td>Next word</td></tr>
+                    <tr><td><kbd>b</kbd></td><td>Beginning of word</td></tr>
+                    <tr><td><kbd>0</kbd></td><td>Start of line</td></tr>
+                    <tr><td><kbd>$</kbd></td><td>End of line</td></tr>
+                    <tr><td><kbd>gg</kbd></td><td>Top of file</td></tr>
+                    <tr><td><kbd>G</kbd></td><td>Bottom of file</td></tr>
+                </table>
+            </div>
+            <div class="cheat-section">
+                <h3>Operators</h3>
+                <table>
+                    <tr><td><kbd>d{mot}</kbd></td><td>Delete motion</td></tr>
+                    <tr><td><kbd>dd</kbd></td><td>Delete line</td></tr>
+                    <tr><td><kbd>diw</kbd></td><td>Delete inner word</td></tr>
+                    <tr><td><kbd>daw</kbd></td><td>Delete a word (with space)</td></tr>
+                    <tr><td><kbd>ciw</kbd></td><td>Change inner word</td></tr>
+                    <tr><td><kbd>caw</kbd></td><td>Change a word (with space)</td></tr>
+                    <tr><td><kbd>cc</kbd></td><td>Change line</td></tr>
+                    <tr><td><kbd>yy</kbd></td><td>Yank line</td></tr>
+                    <tr><td><kbd>yw</kbd>/<kbd>y$</kbd>/...</td><td>Yank motion</td></tr>
+                    <tr><td><kbd>yiw</kbd></td><td>Yank inner word</td></tr>
+                    <tr><td><kbd>p</kbd></td><td>Paste after cursor</td></tr>
+                    <tr><td><kbd>P</kbd></td><td>Paste before cursor</td></tr>
+                    <tr><td><kbd>x</kbd></td><td>Delete char</td></tr>
+                </table>
+            </div>
+            <div class="cheat-section">
+                <h3>History</h3>
+                <table>
+                    <tr><td><kbd>u</kbd></td><td>Undo</td></tr>
+                    <tr><td><kbd>3u</kbd></td><td>Undo 3 times</td></tr>
+                    <tr><td><kbd>Ctrl</kbd>+<kbd>R</kbd></td><td>Redo</td></tr>
+                    <tr><td><kbd>.</kbd></td><td>Repeat last change</td></tr>
+                    <tr><td><kbd>3.</kbd></td><td>Repeat 3 times</td></tr>
+                </table>
+            </div>
+            <div class="cheat-section">
+                <h3>Notes</h3>
+                <p>Operators combine with motions and text objects (e.g. <code>dw</code>, <code>ciw</code>). Most mutations are repeatable with <code>.</code>.</p>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
