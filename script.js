@@ -13,6 +13,7 @@ const state = {
     mode: 'normal',        // 'normal' | 'insert' | 'operator-pending' | 'pending-text-object'
     pendingOperator: null, // 'd' | 'c' | 'y' | null — for future operators
     pendingTextObject: null, // 'i' | 'a' — set while waiting for object char (e.g. 'w')
+    pendingG: false,         // true while waiting for the 2nd key of gg/ge/gE (kept out of inputBuffer so a count can coexist)
     register: { text: null, linewise: false }, // unnamed register
     undoStack: [],         // array of { buffer, cursor } snapshots
     redoStack: [],         // array of { buffer, cursor } snapshots
@@ -82,6 +83,15 @@ function clampCursor() {
     c.col = Math.max(0, Math.min(maxCol, c.col));
 }
 
+// Fixed-grid invariant helper: a line may never exceed COLS columns. Any edit
+// that concatenates text (charwise joins, paste) runs its result through this so
+// nothing can spill past the visible grid. Overflow characters are dropped
+// (arcade rule: nothing goes off-screen; this intentionally differs from vim,
+// which keeps the full untruncated line). See VIM_DIFFERENCES.md.
+function clipCols(s) {
+    return s.length > COLS ? s.slice(0, COLS) : s;
+}
+
 // --- Movement Functions (pure — return new pos, ready for operator ranges) ---
 
 function flattenBuffer() {
@@ -108,24 +118,29 @@ function posToIndex(row, col) {
 
 function moveToNextWord(cur) {
     const flat = flattenBuffer();
-    let idx = posToIndex(cur.row, cur.col) + 1;
-    if (idx >= flat.length) return { row: cur.row, col: cur.col };
+    const curIdx = posToIndex(cur.row, cur.col);
+    if (curIdx + 1 >= flat.length) return { row: cur.row, col: cur.col };
+    let idx = curIdx + 1;
 
-    // skip whitespace
-    while (idx < flat.length && (flat[idx].ch === ' ' || flat[idx].ch === '\n')) idx++;
-    if (idx >= flat.length) return { row: cur.row, col: cur.col };
+    // Classify the char at the cursor: 'ws' | 'word' | 'punct'
+    const curCh = flat[curIdx].ch;
+    const curCls = isWhitespaceCh(curCh) ? 'ws' : (isWordChar(curCh) ? 'word' : 'punct');
 
-    // skip word or punct block
-    const type = isWordChar(flat[idx].ch) ? 'word' : 'punct';
-    idx++;
-    while (idx < flat.length) {
-        const ch = flat[idx].ch;
-        if (ch === ' ' || ch === '\n') break;
-        if (type === 'word' && !isWordChar(ch)) break;
-        if (type === 'punct' && isWordChar(ch)) break;
-        idx++;
+    // If the cursor sits inside a word/punct token, skip past the rest of it.
+    // Stops at whitespace OR at a class change (e.g. word -> punct boundary like 'foo,').
+    if (curCls !== 'ws') {
+        while (idx < flat.length) {
+            const ch = flat[idx].ch;
+            if (isWhitespaceCh(ch)) break;
+            const cls = isWordChar(ch) ? 'word' : 'punct';
+            if (cls !== curCls) break;
+            idx++;
+        }
     }
-    if (idx >= flat.length) return flat[flat.length - 1];
+    // Then skip whitespace (spaces + newlines) to land at the start of the next token.
+    while (idx < flat.length && isWhitespaceCh(flat[idx].ch)) idx++;
+    // No next token exists — vim keeps the cursor where it is.
+    if (idx >= flat.length) return { row: cur.row, col: cur.col };
     return { row: flat[idx].row, col: flat[idx].col };
 }
 
@@ -150,11 +165,154 @@ function moveToPrevWord(cur) {
     return { row: flat[idx].row, col: flat[idx].col };
 }
 
+// WORD motions: a "WORD" is any contiguous run of non-whitespace.
+// W jumps to the start of the next WORD; B jumps to the start of the previous WORD.
+function isWhitespaceCh(ch) {
+    return ch === ' ' || ch === '\n' || ch === '\t';
+}
+
+function moveToNextBigWord(cur) {
+    const flat = flattenBuffer();
+    const curIdx = posToIndex(cur.row, cur.col);
+    if (curIdx + 1 >= flat.length) return { row: cur.row, col: cur.col };
+    let idx = curIdx + 1;
+
+    // If cursor is inside a WORD (non-whitespace), skip the rest of this WORD first.
+    // If cursor is on whitespace, jump straight to next WORD start.
+    const curCh = flat[curIdx].ch;
+    if (!isWhitespaceCh(curCh)) {
+        while (idx < flat.length && !isWhitespaceCh(flat[idx].ch)) idx++;
+    }
+    // Then skip whitespace to land at the next WORD start.
+    while (idx < flat.length && isWhitespaceCh(flat[idx].ch)) idx++;
+    // No next WORD exists — vim keeps the cursor where it is.
+    if (idx >= flat.length) return { row: cur.row, col: cur.col };
+    return { row: flat[idx].row, col: flat[idx].col };
+}
+
+function moveToPrevBigWord(cur) {
+    const flat = flattenBuffer();
+    let idx = posToIndex(cur.row, cur.col) - 1;
+    if (idx < 0) return { row: 0, col: 0 };
+
+    // Skip whitespace backwards
+    while (idx >= 0 && isWhitespaceCh(flat[idx].ch)) idx--;
+    if (idx < 0) return { row: 0, col: 0 };
+
+    // Walk back to the start of this WORD
+    while (idx > 0 && !isWhitespaceCh(flat[idx - 1].ch)) idx--;
+    return { row: flat[idx].row, col: flat[idx].col };
+}
+
+// e / E: forward to the END of a word / WORD (inclusive motion). If the cursor
+// is mid-token, land on the last char of the current token. If the cursor is
+// already at the end of a token (or on whitespace), advance to the next token
+// and land on its last char.
+function moveToNextWordEnd(cur) {
+    const flat = flattenBuffer();
+    const curIdx = posToIndex(cur.row, cur.col);
+    if (curIdx + 1 >= flat.length) return { row: cur.row, col: cur.col };
+
+    const classify = (ch) =>
+        isWhitespaceCh(ch) ? 'ws' : (isWordChar(ch) ? 'word' : 'punct');
+
+    // Walk forward from startIdx through chars of the same class; return idx
+    // of the last char of that token block.
+    const tokenEnd = (startIdx, cls) => {
+        let i = startIdx;
+        while (i + 1 < flat.length && classify(flat[i + 1].ch) === cls) i++;
+        return i;
+    };
+
+    const curCls = classify(flat[curIdx].ch);
+    if (curCls !== 'ws' && classify(flat[curIdx + 1].ch) === curCls) {
+        const endIdx = tokenEnd(curIdx, curCls);
+        return { row: flat[endIdx].row, col: flat[endIdx].col };
+    }
+    // At token boundary or on whitespace: advance to next non-ws token, then
+    // walk to its last char.
+    let idx = curIdx + 1;
+    while (idx < flat.length && isWhitespaceCh(flat[idx].ch)) idx++;
+    if (idx >= flat.length) return { row: cur.row, col: cur.col };
+    const endIdx = tokenEnd(idx, classify(flat[idx].ch));
+    return { row: flat[endIdx].row, col: flat[endIdx].col };
+}
+
+function moveToNextBigWordEnd(cur) {
+    const flat = flattenBuffer();
+    const curIdx = posToIndex(cur.row, cur.col);
+    if (curIdx + 1 >= flat.length) return { row: cur.row, col: cur.col };
+
+    const wordEnd = (startIdx) => {
+        let i = startIdx;
+        while (i + 1 < flat.length && !isWhitespaceCh(flat[i + 1].ch)) i++;
+        return i;
+    };
+
+    const curCh = flat[curIdx].ch;
+    if (!isWhitespaceCh(curCh) && !isWhitespaceCh(flat[curIdx + 1].ch)) {
+        const endIdx = wordEnd(curIdx);
+        return { row: flat[endIdx].row, col: flat[endIdx].col };
+    }
+    let idx = curIdx + 1;
+    while (idx < flat.length && isWhitespaceCh(flat[idx].ch)) idx++;
+    if (idx >= flat.length) return { row: cur.row, col: cur.col };
+    const endIdx = wordEnd(idx);
+    return { row: flat[endIdx].row, col: flat[endIdx].col };
+}
+
+// ge / gE: backward to the END of the previous word / WORD (inclusive).
+// Walks backward looking for the previous "word-end position", where a
+// word-end at i means flat[i] is non-whitespace and flat[i+1] is either
+// whitespace, a different class (for ge), or end-of-buffer.
+function moveToPrevWordEnd(cur) {
+    const flat = flattenBuffer();
+    const curIdx = posToIndex(cur.row, cur.col);
+    if (curIdx < 1) return { row: cur.row, col: cur.col };
+
+    const clsAt = (i) => {
+        if (i >= flat.length) return 'ws'; // end-of-buffer behaves like ws boundary
+        const c = flat[i].ch;
+        return isWhitespaceCh(c) ? 'ws' : (isWordChar(c) ? 'word' : 'punct');
+    };
+
+    let i = curIdx - 1;
+    while (i >= 0) {
+        if (clsAt(i) === 'ws') { i--; continue; }
+        // flat[i] is non-ws. Is it a word-end? Only if next is ws or different class.
+        if (clsAt(i + 1) !== clsAt(i)) return { row: flat[i].row, col: flat[i].col };
+        // Mid-token: walk to the start of this token, then step past it.
+        while (i > 0 && clsAt(i - 1) === clsAt(i)) i--;
+        i--;
+    }
+    return { row: cur.row, col: cur.col };
+}
+
+function moveToPrevBigWordEnd(cur) {
+    const flat = flattenBuffer();
+    const curIdx = posToIndex(cur.row, cur.col);
+    if (curIdx < 1) return { row: cur.row, col: cur.col };
+
+    const nonWs = (i) => i < flat.length && !isWhitespaceCh(flat[i].ch);
+
+    let i = curIdx - 1;
+    while (i >= 0) {
+        if (!nonWs(i)) { i--; continue; }
+        // WORD-end iff next position is ws (or end-of-buffer).
+        if (!nonWs(i + 1)) return { row: flat[i].row, col: flat[i].col };
+        // mid-WORD: walk to WORD start, then step past it.
+        while (i > 0 && nonWs(i - 1)) i--;
+        i--;
+    }
+    return { row: cur.row, col: cur.col };
+}
+
 // --- Mode Management ---
 function setMode(mode) {
     state.mode = mode;
     state.pendingOperator = null;
     state.pendingTextObject = null;
+    state.pendingG = false;
     state.inputBuffer = '';
     // Leaving insert without typing: discard the deferred insert record so `.` doesn't replay an empty no-op
     if (mode !== 'insert') state.pendingInsertRecord = null;
@@ -184,6 +342,12 @@ const MOTION_INFO = {
     'l':  { dir: 'forward',  inclusive: false, linewise: false },
     'w':  { dir: 'forward',  inclusive: false, linewise: false },
     'b':  { dir: 'backward', inclusive: true,  linewise: false },
+    'W':  { dir: 'forward',  inclusive: false, linewise: false },
+    'B':  { dir: 'backward', inclusive: true,  linewise: false },
+    'e':  { dir: 'forward',  inclusive: true,  linewise: false },
+    'E':  { dir: 'forward',  inclusive: true,  linewise: false },
+    'ge': { dir: 'backward', inclusive: true,  linewise: false },
+    'gE': { dir: 'backward', inclusive: true,  linewise: false },
     '0':  { dir: 'backward', inclusive: true,  linewise: false },
     '$':  { dir: 'forward',  inclusive: true,  linewise: false },
     'j':  { dir: 'forward',  inclusive: true,  linewise: true },
@@ -212,22 +376,37 @@ function computeRange(motion, start, end) {
     // Character-wise
     if (info.dir === 'forward') {
         // Forward: from start to (end - 1) if exclusive, end if inclusive
-        let endAdj = info.inclusive ? end : prevPos(end);
+        let endAdj;
+        if (info.inclusive) {
+            endAdj = end;
+        } else if (end.col === 0 && end.row > start.row) {
+            // Exclusive end sits at the start of a LATER line (e.g. `dw` whose
+            // next word begins the next line). The motion spans the line break,
+            // so the affected text must too. prevPos(end) would wrap the end back
+            // onto the previous row and drop the newline; instead mark endCol -1
+            // so deleteChars/changeChars join the lines (matches vim).
+            endAdj = { row: end.row, col: -1 };
+        } else {
+            endAdj = prevPos(end);
+        }
         if (!endAdj) return null; // would go before start
+        // A no-op forward motion (e.g. `w` already at end of buffer) leaves
+        // end === start; for an exclusive motion endAdj = prevPos(end) then
+        // falls strictly before start, which would be a reversed span. No text
+        // is affected, so report no range (mirrors vim affecting nothing).
+        if (!info.inclusive &&
+            (endAdj.row < start.row ||
+             (endAdj.row === start.row && endAdj.col < start.col))) {
+            return null;
+        }
         return { linewise: false, startRow: start.row, startCol: start.col,
                  endRow: endAdj.row, endCol: endAdj.col };
     } else {
-        // Backward: from (end) to (start - 1) if inclusive, to (start) if exclusive
-        let startAdj = info.inclusive ? end : nextPos(end);
-        let endAdj = info.inclusive ? prevPos(start) : prevPos(start);
-        // For backward inclusive: text is [dest, start-1]
-        // For backward exclusive: text is [dest+1, start-1]
-        if (info.inclusive) {
-            startAdj = end;
-        } else {
-            startAdj = nextPos(end);
-        }
-        endAdj = prevPos(start);
+        // Backward inclusive: the deleted text is [dest, start-1].
+        // (All current backward motions are inclusive; if a backward-exclusive
+        // motion is ever added, start should be nextPos(end) instead.)
+        const startAdj = info.inclusive ? end : nextPos(end);
+        const endAdj = prevPos(start);
         if (!startAdj || !endAdj) return null;
         // Ensure order: startAdj should come before endAdj
         return { linewise: false, startRow: startAdj.row, startCol: startAdj.col,
@@ -263,10 +442,14 @@ function posBeforeOrEqual(a, b) {
 
 // --- Text Objects ---
 // Text objects define a region directly (no motion traversal).
-// Currently supported: iw (inner word). Will expand to i"/i(/i{ etc.
+// Supported: iw / aw (word) and bracket blocks — inner (i) / a (a):
+//   parens: i(  a(  i)  ab ; braces: i{  a{  i}  iB  aB ; brackets: i[  a[  i]
+// All bracket objects are single-line, matching iw/aw (see VIM_DIFFERENCES.md).
 function computeTextObjectRange(prefix, objChar) {
     if (prefix === 'i' && objChar === 'w') return innerWordRange();
     if (prefix === 'a' && objChar === 'w') return aWordRange();
+    const pair = bracketChars(objChar);
+    if (pair) return bracketRange(prefix, pair.open, pair.close);
     return null;
 }
 
@@ -316,6 +499,102 @@ function aWordRange() {
 }
 
 
+// Map a text-object char to its bracket pair. Vim accepts several spellings for
+// the same object: ( ) b are parens, { } B are braces, [ ] are square brackets.
+function bracketChars(objChar) {
+    if (objChar === '(' || objChar === ')' || objChar === 'b') return { open: '(', close: ')' };
+    if (objChar === '{' || objChar === '}' || objChar === 'B') return { open: '{', close: '}' };
+    if (objChar === '[' || objChar === ']') return { open: '[', close: ']' };
+    return null;
+}
+
+// Index of the innermost unmatched opening bracket at or left of pos, or -1.
+// Tracked `skip` lets a nested/earlier close consume its opener so we only land
+// on the bracket that actually encloses `pos`.
+function findOpenBracket(line, pos, openCh, closeCh) {
+    let skip = 0;
+    for (let i = pos; i >= 0; i--) {
+        if (line[i] === closeCh) skip++;
+        else if (line[i] === openCh) {
+            if (skip === 0) return i;
+            skip--;
+        }
+    }
+    return -1;
+}
+
+// Index of the closing bracket matching the opener at openIdx (depth-balanced), or -1.
+function findMatchedClose(line, openIdx, openCh, closeCh) {
+    let depth = 0;
+    for (let i = openIdx; i < line.length; i++) {
+        if (line[i] === openCh) depth++;
+        else if (line[i] === closeCh) { depth--; if (depth === 0) return i; }
+    }
+    return -1;
+}
+
+// Index of the opener matching the closer at closeIdx (depth-balanced), or -1.
+// Used when the cursor sits on a closing delimiter, where a plain left scan would
+// treat that closer as needing its own opener and scan right past its pair.
+function findMatchedOpen(line, closeIdx, openCh, closeCh) {
+    let depth = 0;
+    for (let i = closeIdx; i >= 0; i--) {
+        if (line[i] === closeCh) depth++;
+        else if (line[i] === openCh) { depth--; if (depth === 0) return i; }
+    }
+    return -1;
+}
+
+// First complete bracket pair whose opener is at or after `from`, or null.
+function findForwardPair(line, from, openCh, closeCh) {
+    for (let i = from; i < line.length; i++) {
+        if (line[i] === openCh) {
+            const close = findMatchedClose(line, i, openCh, closeCh);
+            if (close >= 0) return { open: i, close };
+        }
+    }
+    return null;
+}
+
+// Charwise range for an inner (i) / a (a) bracket block on the cursor's line.
+// Returns null when no matching pair exists on the line (operator then aborts).
+function bracketRange(prefix, openCh, closeCh) {
+    const { row, col } = state.cursor;
+    const line = state.buffer[row] || '';
+    // Enclosing pair. When the cursor is on a closing delimiter, match that closer
+    // to its opener directly; otherwise find the innermost opener at/left of the
+    // cursor whose matching close is at/right of the cursor (this also matches a
+    // cursor sitting on the opening delimiter or strictly inside the pair).
+    let open;
+    let close;
+    if (line[col] === closeCh) {
+        close = col;
+        open = findMatchedOpen(line, col, openCh, closeCh);
+    } else {
+        open = findOpenBracket(line, col, openCh, closeCh);
+        close = open >= 0 ? findMatchedClose(line, open, openCh, closeCh) : -1;
+    }
+    if (open < 0 || close < col) {
+        // Not inside a pair: use the next complete pair at/after the cursor, then
+        // (like Vim) wrap to the earliest pair earlier on the line.
+        const next = findForwardPair(line, col, openCh, closeCh) || findForwardPair(line, 0, openCh, closeCh);
+        if (!next) return null;
+        open = next.open;
+        close = next.close;
+    }
+    if (prefix === 'i') {
+        // Inner text between the delimiters (adjacent `()` yields an empty, no-op range).
+        return { linewise: false, startRow: row, startCol: open + 1, endRow: row, endCol: close - 1 };
+    }
+    // 'a': the delimiters plus adjacent whitespace — prefer trailing, else leading.
+    let aEnd = close;
+    while (aEnd < line.length - 1 && charClass(line[aEnd + 1]) === 'space') aEnd++;
+    if (aEnd > close) return { linewise: false, startRow: row, startCol: open, endRow: row, endCol: aEnd };
+    let aStart = open;
+    while (aStart > 0 && charClass(line[aStart - 1]) === 'space') aStart--;
+    return { linewise: false, startRow: row, startCol: aStart, endRow: row, endCol: close };
+}
+
 // --- Motion Destination (pure: just computes where a motion lands) ---
 function motionDest(movement) {
     switch (movement) {
@@ -325,6 +604,12 @@ function motionDest(movement) {
         case 'k': return { row: state.cursor.row - 1, col: state.cursor.col };
         case 'w': return moveToNextWord(state.cursor);
         case 'b': return moveToPrevWord(state.cursor);
+        case 'W': return moveToNextBigWord(state.cursor);
+        case 'B': return moveToPrevBigWord(state.cursor);
+        case 'e': return moveToNextWordEnd(state.cursor);
+        case 'E': return moveToNextBigWordEnd(state.cursor);
+        case 'ge': return moveToPrevWordEnd(state.cursor);
+        case 'gE': return moveToPrevBigWordEnd(state.cursor);
         case '0': return { row: state.cursor.row, col: 0 };
         case '$': return { row: state.cursor.row, col: endOfLine(state.cursor.row) };
         case 'gg': return { row: 0, col: firstNonBlank(0) };
@@ -334,8 +619,8 @@ function motionDest(movement) {
 }
 
 // --- Movement Execution (simple mode: no operator, just move) ---
-function executeMovement(movement) {
-    const newPos = motionDest(movement);
+function executeMovement(movement, destOverride) {
+    const newPos = destOverride || motionDest(movement);
     if (!newPos) return;
 
     if (state.mode === 'operator-pending') {
@@ -516,11 +801,16 @@ function doRepeatOnce(rec) {
             break;
         }
         case 'x': {
-            const line = state.buffer[c.row];
-            if (line.length > 0) {
+            const startLine = state.buffer[c.row] || '';
+            if (startLine.length > 0 && c.col < startLine.length) {
                 pushUndo();
-                setRegister(line[c.col], false);
-                state.buffer[c.row] = line.slice(0, c.col) + line.slice(c.col + 1);
+                const reps = rec.count || 1;
+                for (let n = 0; n < reps; n++) {
+                    const line = state.buffer[c.row];
+                    if (line.length === 0 || c.col >= line.length) break;
+                    setRegister(line[c.col], false);
+                    state.buffer[c.row] = line.slice(0, c.col) + line.slice(c.col + 1);
+                }
             }
             break;
         }
@@ -530,15 +820,22 @@ function doRepeatOnce(rec) {
         }
         case 'insert': {
             pushUndo();
-            // `i`-style: direction 'before' = insert at cursor, 'after' = insert one past cursor
+            // `i`-style: direction 'before' = insert at cursor, 'after' = insert one past cursor.
+            // 'I' = first non-blank of line, 'A' = end of line.
             if (rec.direction === 'after') {
                 const line = state.buffer[c.row] || '';
                 c.col = Math.min(c.col + 1, line.length);
+            } else if (rec.direction === 'I') {
+                c.col = firstNonBlank(c.row);
+            } else if (rec.direction === 'A') {
+                c.col = (state.buffer[c.row] || '').length;
             }
             insertRecordedText(t, /* fromInsert = */ true);
             break;
         }
         case 'open': {
+            // Refuse a "below" open at the bottom row: no room to grow the fixed grid.
+            if (rec.direction === 'below' && c.row >= ROWS - 1) break;
             pushUndo();
             // Open a new line below or above and put typed text in it
             if (rec.direction === 'below') {
@@ -571,6 +868,8 @@ function insertRecordedText(t, fromInsert = false) {
     const c = state.cursor;
     for (const ch of t) {
         if (ch === '\n') {
+            // Refuse to split past the last row (keeps exactly ROWS rows on-screen).
+            if (c.row >= ROWS - 1) continue;
             const line = state.buffer[c.row];
             const after = line.slice(c.col);
             state.buffer[c.row] = line.slice(0, c.col);
@@ -578,6 +877,13 @@ function insertRecordedText(t, fromInsert = false) {
             state.buffer[c.row + 1] = after;
             c.row++;
             c.col = 0;
+        } else if (ch === '\b') {
+            // Recorded in-line backspace: delete the char just left of the caret.
+            if (c.col > 0) {
+                const line = state.buffer[c.row];
+                state.buffer[c.row] = line.slice(0, c.col - 1) + line.slice(c.col);
+                c.col--;
+            }
         } else {
             const line = state.buffer[c.row];
             if (line.length < COLS) {
@@ -642,7 +948,7 @@ function pasteCharwise(text, before) {
     const at = before ? c.col : c.col + 1;
 
     if (!text.includes('\n')) {
-        state.buffer[c.row] = line.slice(0, at) + text + line.slice(at);
+        state.buffer[c.row] = clipCols(line.slice(0, at) + text + line.slice(at));
         state.cursor = { row: c.row, col: Math.max(0, at + text.length - 1) };
         return;
     }
@@ -651,11 +957,11 @@ function pasteCharwise(text, before) {
     const pieces = text.split('\n');
     const tail = line.slice(at);
     const head = line.slice(0, at);
-    // Current line becomes head + first piece
-    state.buffer[c.row] = head + pieces[0];
+    // Current line becomes head + first piece (clipped to the grid width)
+    state.buffer[c.row] = clipCols(head + pieces[0]);
     // The last piece merges with the tail
-    const newLines = pieces.slice(1).slice();
-    newLines[newLines.length - 1] = newLines[newLines.length - 1] + tail;
+    const newLines = pieces.slice(1).map(clipCols);
+    newLines[newLines.length - 1] = clipCols(newLines[newLines.length - 1] + tail);
     state.buffer.splice(c.row + 1, 0, ...newLines);
     while (state.buffer.length > ROWS) state.buffer.pop();
     // Cursor lands on last char of pasted text (before tail)
@@ -700,7 +1006,7 @@ function deleteChars(range) {
         // append text after end from last line
         const firstLine = state.buffer[startRow].slice(0, startCol);
         const lastLine = state.buffer[endRow].slice(endCol + 1);
-        const merged = firstLine + lastLine;
+        const merged = clipCols(firstLine + lastLine);
 
         // Remove affected lines and insert merged
         const numLines = endRow - startRow + 1;
@@ -745,7 +1051,7 @@ function changeChars(range) {
     } else {
         const firstLine = state.buffer[startRow].slice(0, startCol);
         const lastLine = state.buffer[endRow].slice(endCol + 1);
-        const merged = firstLine + lastLine;
+        const merged = clipCols(firstLine + lastLine);
         const numLines = endRow - startRow + 1;
         state.buffer.splice(startRow, numLines, merged);
         while (state.buffer.length < ROWS) state.buffer.push('');
@@ -762,8 +1068,32 @@ function handleInsertKey(e) {
     const key = e.key;
 
     if (key === 'Escape') {
+        // Vim: leaving insert mode after typing places the cursor back on the
+        // last typed character (insert mode sits one past the caret). Only move
+        // if the session actually mutated the buffer (an untyped i/a stays put).
+        if (state.insertTouched && state.cursor.col > 0) state.cursor.col--;
         setMode('normal');
         clampCursor();
+        render();
+        return;
+    }
+
+    // Arrow keys move the caret within insert mode (no buffer change, no undo push).
+    if (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown') {
+        const c = state.cursor;
+        const line = state.buffer[c.row] || '';
+        if (key === 'ArrowLeft') {
+            if (c.col > 0) c.col--;
+            else if (c.row > 0) { c.row--; c.col = (state.buffer[c.row] || '').length; }
+        } else if (key === 'ArrowRight') {
+            if (c.col < line.length) c.col++;
+            else if (c.row < ROWS - 1) { c.row++; c.col = 0; }
+        } else if (key === 'ArrowUp') {
+            if (c.row > 0) { c.row--; c.col = Math.min(c.col, (state.buffer[c.row] || '').length); }
+        } else if (c.row < ROWS - 1) { // ArrowDown
+            c.row++;
+            c.col = Math.min(c.col, (state.buffer[c.row] || '').length);
+        }
         render();
         return;
     }
@@ -777,13 +1107,17 @@ function handleInsertKey(e) {
             const line = state.buffer[c.row];
             state.buffer[c.row] = line.slice(0, c.col - 1) + line.slice(c.col);
             c.col--;
+            // Record the backspace so `.` reproduces the net typed text.
+            if (state.lastChange && 'typed' in state.lastChange) state.lastChange.typed += '\b';
         } else if (c.row > 0) {
+            // Join with previous line. Not recorded in `typed`: reproducing a
+            // cross-line join inside a `.` replay is out of scope (rare edge).
             const prev = state.buffer[c.row - 1];
-            state.buffer[c.row - 1] = prev + state.buffer[c.row];
+            state.buffer[c.row - 1] = clipCols(prev + state.buffer[c.row]);
             state.buffer.splice(c.row, 1);
             state.buffer.push('');
             c.row--;
-            c.col = prev.length;
+            c.col = Math.min(prev.length, COLS);
         }
         render();
         return;
@@ -791,6 +1125,9 @@ function handleInsertKey(e) {
 
     if (key === 'Enter') {
         const c = state.cursor;
+        // Fixed-height grid: there is no row below the last one, so Enter at the
+        // bottom row is refused (no-op) to keep exactly ROWS rows on-screen.
+        if (c.row >= ROWS - 1) { render(); return; }
         const line = state.buffer[c.row];
         const after = line.slice(c.col);
         state.buffer[c.row] = line.slice(0, c.col);
@@ -829,8 +1166,10 @@ function handleNormalKey(e) {
     else if (key === 'ArrowDown') key = 'j';
     else if (key === 'Backspace') key = 'h';
 
-    // Escape cancels operator-pending
+    // Escape cancels operator-pending and any pending count prefix
     if (key === 'Escape') {
+        state.inputBuffer = '';
+        state.pendingG = false;
         if (state.mode === 'operator-pending') {
             setMode('normal');
             state.statusMsg = '';
@@ -862,6 +1201,9 @@ function handleNormalKey(e) {
         setMode('insert'); state.statusMsg = ''; render(); return;
     }
     if (key === 'o') {
+        // Fixed-height grid: opening a line below the last row has nowhere to go,
+        // so `o` at the bottom row is refused (no-op). See VIM_DIFFERENCES.md.
+        if (state.cursor.row >= ROWS - 1) { render(); return; }
         state.insertTouched = false;
         ensureInsertPushed(); // o mutates buffer immediately (one undo with subsequent typing)
         const c = state.cursor;
@@ -881,12 +1223,28 @@ function handleNormalKey(e) {
         state.lastChange = { kind: 'open', direction: 'above', typed: '' };
         setMode('insert'); state.statusMsg = ''; render(); return;
     }
+    // I — insert at first non-blank of line
+    if (key === 'I') {
+        state.insertTouched = false;
+        state.pendingInsertRecord = { kind: 'insert', direction: 'I', typed: '' };
+        state.cursor.col = firstNonBlank(state.cursor.row);
+        setMode('insert'); state.statusMsg = ''; render(); return;
+    }
+    // A — append at end of line
+    if (key === 'A') {
+        state.insertTouched = false;
+        state.pendingInsertRecord = { kind: 'insert', direction: 'A', typed: '' };
+        const line = state.buffer[state.cursor.row] || '';
+        state.cursor.col = line.length;
+        setMode('insert'); state.statusMsg = ''; render(); return;
+    }
 
     // Operator-pending entry (or double-tap like dd/cc/yy)
     if (key === 'd' || key === 'c' || key === 'y') {
         // Double-tap: dd deletes line, cc changes line, yy yanks line. Honors count prefix.
         if (state.mode === 'operator-pending' && state.pendingOperator === key) {
             const opCount = state.inputBuffer ? parseInt(state.inputBuffer) : 1;
+            state.inputBuffer = ''; // consume the count so it does not leak to the next command
             const endRow = Math.min(ROWS - 1, state.cursor.row + opCount - 1);
             const range = { linewise: true, startRow: state.cursor.row, endRow };
             if (key === 'd') {
@@ -905,7 +1263,9 @@ function handleNormalKey(e) {
             render();
             return;
         }
-        state.inputBuffer = ''; // clear any stale count for single-press operator entry
+        // Preserve a leading numeric count (so `2dw` == `d2w`); clear only a
+        // stale non-numeric buffer (e.g. a leftover 'g' prefix).
+        if (state.inputBuffer && !/^[0-9]+$/.test(state.inputBuffer)) state.inputBuffer = '';
         state.mode = 'operator-pending';
         state.pendingOperator = key;
         state.statusMsg = key + ' ...';
@@ -913,16 +1273,28 @@ function handleNormalKey(e) {
         return;
     }
 
-    // x — delete char under cursor
+    // x — delete char(s) under cursor (honors count: 3x deletes three chars)
     if (key === 'x') {
         const c = state.cursor;
-        const line = state.buffer[c.row];
-        if (line.length > 0) {
+        let count = state.inputBuffer ? parseInt(state.inputBuffer) : 1;
+        state.inputBuffer = ''; // always consume the prefix, even if nothing is deleted
+        if (!count || count < 1) count = 1;
+        const startLine = state.buffer[c.row] || '';
+        if (startLine.length > 0 && c.col < startLine.length) {
             pushUndo();
-            // x is equivalent to dl: also fills the register so p can paste it
-            setRegister(line[c.col], false);
-            state.buffer[c.row] = line.slice(0, c.col) + line.slice(c.col + 1);
-            state.lastChange = { kind: 'x' };
+            let lastDeleted = null;
+            // In-line only (does not wrap to the next line); stops at end of line.
+            for (let n = 0; n < count; n++) {
+                const line = state.buffer[c.row];
+                if (line.length === 0 || c.col >= line.length) break;
+                lastDeleted = line[c.col];
+                state.buffer[c.row] = line.slice(0, c.col) + line.slice(c.col + 1);
+            }
+            // x is equivalent to dl: fills the register (last deleted char) so p can paste it.
+            if (lastDeleted !== null) {
+                setRegister(lastDeleted, false);
+                state.lastChange = { kind: 'x', count };
+            }
             clampCursor();
         }
         render(); return;
@@ -965,21 +1337,54 @@ function handleNormalKey(e) {
         return;
     }
 
-    // gg / G
+    // gg / G — honor a count: 5gg / 5G jump to that absolute (1-based) line.
     if (key === 'g') {
-        if (state.inputBuffer === 'g') {
+        if (state.pendingG) {
+            state.pendingG = false;
+            const count = state.inputBuffer ? parseInt(state.inputBuffer, 10) : 0;
             state.inputBuffer = '';
-            executeMovement('gg');
+            if (count > 0) {
+                const row = Math.min(count - 1, ROWS - 1);
+                executeMovement('gg', { row, col: firstNonBlank(row) });
+            } else {
+                executeMovement('gg');
+            }
+            state.statusMsg = '';
         } else {
-            state.inputBuffer = 'g';
-            state.statusMsg = 'g';
+            state.pendingG = true;
+            state.statusMsg = state.inputBuffer + 'g';
         }
         return;
     }
-    if (key === 'G') { state.inputBuffer = ''; executeMovement('G'); return; }
+    // ge / gE: pending 'g' followed by e/E → backward to end of previous word/WORD.
+    if (state.pendingG && (key === 'e' || key === 'E')) {
+        const motion = (key === 'e') ? 'ge' : 'gE';
+        const count = state.inputBuffer ? parseInt(state.inputBuffer, 10) : 1;
+        state.pendingG = false;
+        state.inputBuffer = '';
+        if (state.mode === 'operator-pending') {
+            executeMovement(motion); // operator applies over a single motion span
+        } else {
+            for (let i = 0; i < count; i++) executeMovement(motion);
+            state.statusMsg = '';
+        }
+        return;
+    }
+    if (key === 'G') {
+        const count = state.inputBuffer ? parseInt(state.inputBuffer, 10) : 0;
+        state.pendingG = false;
+        state.inputBuffer = '';
+        if (count > 0) {
+            const row = Math.min(count - 1, ROWS - 1);
+            executeMovement('G', { row, col: firstNonBlank(row) });
+        } else {
+            executeMovement('G');
+        }
+        return;
+    }
 
     // Movement keys
-    if ('hjklwb$0'.includes(key)) {
+    if ('hjklwbWBeE$0'.includes(key)) {
         const count = state.inputBuffer ? parseInt(state.inputBuffer) : 1;
         state.inputBuffer = '';
 
@@ -1022,6 +1427,7 @@ function handleNormalKey(e) {
 
     state.inputBuffer = '';
     state.statusMsg = '';
+    state.pendingG = false; // an unrecognized command cancels a pending 'g' sequence
 }
 
 
@@ -1113,6 +1519,14 @@ function handleKeyDown(e) {
         return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // Ignore bare modifier / lock keys. A lone keydown (e.g. pressing Shift to
+    // type a capital, "gE") must NOT fall through to the command handlers, or it
+    // clears a pending count/`g` prefix mid-command. (Key combo presses still
+    // arrive as the real character, e.g. Shift+e -> e.key === 'E', which we want.)
+    if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' ||
+        e.key === 'Meta' || e.key === 'CapsLock' || e.key === 'Dead') {
+        return;
+    }
     e.preventDefault();
     if (state.mode === 'insert') {
         handleInsertKey(e);
@@ -1134,5 +1548,50 @@ function init() {
     document.addEventListener('keydown', handleKeyDown);
 }
 
-init();
+// Only auto-init in the browser. In Node (test runner) skip DOM setup.
+if (typeof window !== 'undefined') {
+    init();
+}
+
+// Export internal pieces for unit tests. In the browser this block is a no-op.
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        state,
+        ROWS,
+        COLS,
+        clampCursor,
+        isWordChar,
+        isWhitespaceCh,
+        posToIndex,
+        flattenBuffer,
+        firstNonBlank,
+        moveToNextWord,
+        moveToPrevWord,
+        moveToNextBigWord,
+        moveToPrevBigWord,
+        moveToNextWordEnd,
+        moveToNextBigWordEnd,
+        moveToPrevWordEnd,
+        moveToPrevBigWordEnd,
+        MOTION_INFO,
+        computeRange,
+        prevPos,
+        nextPos,
+        executeMovement,
+        applyYank,
+        applyPaste,
+        applyDelete,
+        applyChange,
+        getRangeText,
+        pushUndo,
+        undo,
+        redo,
+        setMode,
+        repeatLastChange,
+        handleNormalKey,
+        handleInsertKey,
+        handleTextObjectKey,
+        handleKeyDown,
+    };
+}
 

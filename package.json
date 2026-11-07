@@ -1,0 +1,9 @@
+{
+  "name": "vimgame",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vim simulator (browser-only). Tests run via Node's built-in test runner.",
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}

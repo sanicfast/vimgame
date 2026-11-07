@@ -20,63 +20,85 @@
             </div>
         </div>
         <div class="cheatsheet">
-            <h2>Vim Cheatsheet</h2>
-            <div class="cheat-section">
-                <h3>Modes</h3>
+            <div class="cheat-header">
+                <span class="cheat-logo">V</span>
+                <div>
+                    <h2>Vim Cheatsheet</h2>
+                    <span class="cheat-subtitle">your essential keybindings</span>
+                </div>
+            </div>
+
+            <div class="cheat-section cat-modes">
+                <h3><span class="cat-icon">⬤</span> Modes</h3>
                 <table>
                     <tr><td><kbd>Esc</kbd></td><td>→ Normal mode</td></tr>
                     <tr><td><kbd>i</kbd></td><td>Insert before cursor</td></tr>
+                    <tr><td><kbd>I</kbd></td><td>Insert at first non-blank</td></tr>
                     <tr><td><kbd>a</kbd></td><td>Append after cursor</td></tr>
+                    <tr><td><kbd>A</kbd></td><td>Append at end of line</td></tr>
                     <tr><td><kbd>o</kbd></td><td>Open line below</td></tr>
                     <tr><td><kbd>O</kbd></td><td>Open line above</td></tr>
                 </table>
             </div>
-            <div class="cheat-section">
-                <h3>Movement</h3>
+
+            <div class="cheat-section cat-movement">
+                <h3><span class="cat-icon">⬤</span> Movement</h3>
                 <table>
-                    <tr><td><kbd>h</kbd> / <kbd>←</kbd> / <kbd>⌫</kbd></td><td>Left</td></tr>
-                    <tr><td><kbd>j</kbd> / <kbd>↓</kbd></td><td>Down</td></tr>
-                    <tr><td><kbd>k</kbd> / <kbd>↑</kbd></td><td>Up</td></tr>
-                    <tr><td><kbd>l</kbd> / <kbd>→</kbd></td><td>Right</td></tr>
+                    <tr><td><kbd>h</kbd><span class="alt-keys">/ <kbd>←</kbd> / <kbd>⌫</kbd></span></td><td>Left</td></tr>
+                    <tr><td><kbd>j</kbd><span class="alt-keys">/ <kbd>↓</kbd></span></td><td>Down</td></tr>
+                    <tr><td><kbd>k</kbd><span class="alt-keys">/ <kbd>↑</kbd></span></td><td>Up</td></tr>
+                    <tr><td><kbd>l</kbd><span class="alt-keys">/ <kbd>→</kbd></span></td><td>Right</td></tr>
                     <tr><td><kbd>w</kbd></td><td>Next word</td></tr>
                     <tr><td><kbd>b</kbd></td><td>Beginning of word</td></tr>
+                    <tr><td><kbd>W</kbd></td><td>Next WORD (whitespace-delimited)</td></tr>
+                    <tr><td><kbd>B</kbd></td><td>Prev WORD (whitespace-delimited)</td></tr>
+                    <tr><td><kbd>e</kbd></td><td>End of word</td></tr>
+                    <tr><td><kbd>ge</kbd></td><td>End of previous word</td></tr>
+                    <tr><td><kbd>E</kbd></td><td>End of WORD</td></tr>
+                    <tr><td><kbd>gE</kbd></td><td>End of previous WORD</td></tr>
                     <tr><td><kbd>0</kbd></td><td>Start of line</td></tr>
                     <tr><td><kbd>$</kbd></td><td>End of line</td></tr>
-                    <tr><td><kbd>gg</kbd></td><td>Top of file</td></tr>
-                    <tr><td><kbd>G</kbd></td><td>Bottom of file</td></tr>
+                    <tr><td><kbd>gg</kbd><span class="alt-keys">/ <kbd>5gg</kbd></span></td><td>Top of file / line 5</td></tr>
+                    <tr><td><kbd>G</kbd><span class="alt-keys">/ <kbd>5G</kbd></span></td><td>Bottom of file / line 5</td></tr>
                 </table>
             </div>
-            <div class="cheat-section">
-                <h3>Operators</h3>
+
+            <div class="cheat-section cat-operators">
+                <h3><span class="cat-icon">⬤</span> Operators</h3>
                 <table>
-                    <tr><td><kbd>d{mot}</kbd></td><td>Delete motion</td></tr>
+                    <tr><td><kbd>d</kbd><span class="combo">+ motion</span></td><td>Delete motion</td></tr>
                     <tr><td><kbd>dd</kbd></td><td>Delete line</td></tr>
                     <tr><td><kbd>diw</kbd></td><td>Delete inner word</td></tr>
-                    <tr><td><kbd>daw</kbd></td><td>Delete a word (with space)</td></tr>
+                    <tr><td><kbd>daw</kbd></td><td>Delete a word + space</td></tr>
                     <tr><td><kbd>ciw</kbd></td><td>Change inner word</td></tr>
-                    <tr><td><kbd>caw</kbd></td><td>Change a word (with space)</td></tr>
+                    <tr><td><kbd>caw</kbd></td><td>Change a word + space</td></tr>
                     <tr><td><kbd>cc</kbd></td><td>Change line</td></tr>
                     <tr><td><kbd>yy</kbd></td><td>Yank line</td></tr>
-                    <tr><td><kbd>yw</kbd>/<kbd>y$</kbd>/...</td><td>Yank motion</td></tr>
+                    <tr><td><kbd>y</kbd><span class="combo">+ motion</span></td><td>Yank motion</td></tr>
                     <tr><td><kbd>yiw</kbd></td><td>Yank inner word</td></tr>
+                    <tr><td><kbd>ci(</kbd></td><td>Change inside (…) block</td></tr>
+                    <tr><td><kbd>di{</kbd></td><td>Delete inside {…} block</td></tr>
+                    <tr><td><kbd>da[</kbd></td><td>Delete a […] block</td></tr>
                     <tr><td><kbd>p</kbd></td><td>Paste after cursor</td></tr>
                     <tr><td><kbd>P</kbd></td><td>Paste before cursor</td></tr>
                     <tr><td><kbd>x</kbd></td><td>Delete char</td></tr>
                 </table>
             </div>
-            <div class="cheat-section">
-                <h3>History</h3>
+
+            <div class="cheat-section cat-history">
+                <h3><span class="cat-icon">⬤</span> History</h3>
                 <table>
                     <tr><td><kbd>u</kbd></td><td>Undo</td></tr>
-                    <tr><td><kbd>3u</kbd></td><td>Undo 3 times</td></tr>
-                    <tr><td><kbd>Ctrl</kbd>+<kbd>R</kbd></td><td>Redo</td></tr>
+                    <tr><td><kbd>3</kbd><kbd>u</kbd></td><td>Undo 3 times</td></tr>
+                    <tr><td><kbd>Ctrl</kbd><span class="plus">+</span><kbd>R</kbd></td><td>Redo</td></tr>
                     <tr><td><kbd>.</kbd></td><td>Repeat last change</td></tr>
-                    <tr><td><kbd>3.</kbd></td><td>Repeat 3 times</td></tr>
+                    <tr><td><kbd>3</kbd><kbd>.</kbd></td><td>Repeat 3 times</td></tr>
                 </table>
             </div>
-            <div class="cheat-section">
-                <h3>Notes</h3>
-                <p>Operators combine with motions and text objects (e.g. <code>dw</code>, <code>ciw</code>). Most mutations are repeatable with <code>.</code>.</p>
+
+            <div class="cheat-section cat-notes">
+                <h3><span class="cat-icon">💡</span> Tips</h3>
+                <p>Operators combine with motions and text objects (e.g. <code>dw</code>, <code>ciw</code>). Most mutations are repeatable with <code>.</code> Prefix a line jump with a number (<code>5G</code>), and arrow keys move the caret while in insert mode.</p>
             </div>
         </div>
     </div>
