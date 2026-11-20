@@ -6,6 +6,332 @@
 const ROWS = 20;
 const COLS = 80;
 
+// --- Challenge Data ---
+// Each challenge provides a `start` buffer (what the player sees) and a `target`
+// buffer (the text they must produce with vim motions). Lines are padded to ROWS
+// automatically by initChallenge().
+const CHALLENGES = [
+    {
+        name: 'Open a New Line',
+        hint: 'o opens a line below and drops you into insert mode — type the new line, then Esc',
+        start: [
+            'alpha',
+            'omega',
+        ],
+        target: [
+            'alpha',
+            'beta',
+            'omega',
+        ],
+    },
+    {
+        name: 'Close the Calls',
+        hint: 'A appends at end of line — type ")" to close each call, then j and . to repeat',
+        start: [
+            'print("bye',
+            'log("hi',
+        ],
+        target: [
+            'print("bye")',
+            'log("hi")',
+        ],
+    },
+    {
+        name: 'Add Semicolons',
+        hint: 'A appends at end of line; type ; then Esc, j, and . to repeat on each line',
+        start: [
+            'let a = 1',
+            'let b = 2',
+            'let c = 3',
+        ],
+        target: [
+            'let a = 1;',
+            'let b = 2;',
+            'let c = 3;',
+        ],
+    },
+    {
+        name: 'Make It a List',
+        hint: 'I inserts at the first non-blank; type "- " then Esc, j, . for the next lines',
+        start: [
+            '  one',
+            '  two',
+            '  three',
+        ],
+        target: [
+            '  - one',
+            '  - two',
+            '  - three',
+        ],
+    },
+    {
+        name: 'Duplicate the Line',
+        hint: 'yy yanks the whole line, p puts a copy below it',
+        start: [
+            'first',
+            'second',
+            'third',
+        ],
+        target: [
+            'first',
+            'first',
+            'second',
+            'third',
+        ],
+    },
+    {
+        name: 'Swap Two Characters',
+        hint: 'Stand on the wrong char: x cuts it, p pastes it after the next one — fixes teh->the',
+        start: [
+            'teh cat',
+            'mroe time',
+        ],
+        target: [
+            'the cat',
+            'more time',
+        ],
+    },
+    {
+        name: 'Fix the Typo',
+        hint: 'r replaces the char under the cursor — f: finds the colon, r; swaps it for ;, j then . repeats',
+        start: [
+            'x = 1:',
+            'y = 2:',
+        ],
+        target: [
+            'x = 1;',
+            'y = 2;',
+        ],
+    },
+    {
+        name: 'Rewrite the Lines',
+        hint: 'cc changes the whole line to text you type; Esc, j, . repeats it below',
+        start: [
+            'TODO fix',
+            'TODO clean',
+        ],
+        target: [
+            '// done',
+            '// done',
+        ],
+    },
+    {
+        name: 'Reword the Comment',
+        hint: 'cc rewrites a whole line; do it on each line (no repeat needed since they differ)',
+        start: [
+            '# compute result',
+            '# build data',
+        ],
+        target: [
+            '# calculate total',
+            '# assemble input',
+        ],
+    },
+    {
+        name: 'Delete Two Words',
+        hint: '2dw deletes two words; j then . does the same on the next line',
+        start: [
+            'alpha beta gamma',
+            'delta eps zeta',
+        ],
+        target: [
+            'gamma',
+            'zeta',
+        ],
+    },
+    {
+        name: 'Remove the Dots',
+        hint: 'f. finds a dot, x deletes it, ; jumps to the next dot',
+        start: [
+            'd.o.g.',
+            'c.a.t.',
+        ],
+        target: [
+            'dog',
+            'cat',
+        ],
+    },
+    {
+        name: 'Swap Two Lines',
+        hint: 'ddp cuts the current line and pastes it after the next (a swap)',
+        start: [
+            'let b = 2;',
+            'let a = 1;',
+            'console.log(a + b);',
+        ],
+        target: [
+            'let a = 1;',
+            'let b = 2;',
+            'console.log(a + b);',
+        ],
+    },
+    {
+        name: 'Delete the Dead Code',
+        hint: 'dd deletes a line, 2dd deletes two — remove the commented-out lines',
+        start: [
+            'function add(a, b) {',
+            '  // return a - b;',
+            '  // old buggy version',
+            '  return a + b;',
+            '  // debug only',
+            '}',
+        ],
+        target: [
+            'function add(a, b) {',
+            '  return a + b;',
+            '}',
+        ],
+    },
+    {
+        name: 'Set Every Value',
+        hint: 'ci( to change inside the parens, then j. to repeat on the next line',
+        start: [
+            'setValue(0)',
+            'setValue(0)',
+            'setValue(0)',
+            'setValue(0)',
+        ],
+        target: [
+            'setValue(42)',
+            'setValue(42)',
+            'setValue(42)',
+            'setValue(42)',
+        ],
+    },
+    {
+        name: 'Fill the Quotes',
+        hint: 'f" jumps to the quote, l steps onto the closing one, i lets you type between them',
+        start: [
+            'name = ""',
+            'city = ""',
+        ],
+        target: [
+            'name = "alice"',
+            'city = "bob"',
+        ],
+    },
+    {
+        name: 'Empty the Containers',
+        hint: 'cursor on the bracket, then di[ / di{ / di( to delete inside',
+        start: [
+            'let coords = [1, 2, 3];',
+            'let point = {x: 0, y: 0};',
+            'let wrapped = (old value);',
+        ],
+        target: [
+            'let coords = [];',
+            'let point = {};',
+            'let wrapped = ();',
+        ],
+    },
+    {
+        name: 'Trim the Tail',
+        hint: 'f| finds the delimiter, d$ deletes to end of line',
+        start: [
+            'apple|12345',
+            'banana|6789',
+            'cherry|24680',
+        ],
+        target: [
+            'apple',
+            'banana',
+            'cherry',
+        ],
+    },
+    {
+        name: 'Fix the Bugs',
+        hint: 'fix the off-by-one, missing slice, and template literal',
+        start: [
+            'function fibonacci(n) {',
+            '  if (n <= 0) return n;',
+            '  return fibonacci(n - 1) + fibonacci(n - 2);',
+            '}',
+            '',
+            'const result = fibonacci(10);',
+            "console.log('fib(10) = ' + result);",
+            '',
+            '// TODO: implement memoization',
+            '',
+            'function quickSort(arr) {',
+            '  if (arr.length <= 1) return arr;',
+            '  const pivot = arr[0];',
+            '  const left = arr.filter(x => x < pivot);',
+            '  const right = arr.filter(x => x >= pivot);',
+            '  return [...quickSort(left), pivot, ...quickSort(right)];',
+            '}',
+            '',
+            'console.log(quickSort([3, 6, 8, 10, 1, 2, 1]));',
+        ],
+        target: [
+            'function fibonacci(n) {',
+            '  if (n <= 1) return n;',
+            '  return fibonacci(n - 1) + fibonacci(n - 2);',
+            '}',
+            '',
+            'const result = fibonacci(10);',
+            'console.log(`fib(10) = ${result}`);',
+            '',
+            '// TODO: implement memoization',
+            '// TODO: add input validation',
+            'function quickSort(arr) {',
+            '  if (arr.length <= 1) return arr;',
+            '  const pivot = arr[0];',
+            '  const left = arr.slice(1).filter(x => x < pivot);',
+            '  const right = arr.slice(1).filter(x => x >= pivot);',
+            '  return [...quickSort(left), pivot, ...quickSort(right)];',
+            '}',
+            '',
+            'console.log(quickSort([3, 6, 8, 10, 1, 2, 1]));',
+        ],
+    },
+    {
+        name: 'Rename & Refactor',
+        hint: 'ciw to rename fibonacci → fib and result → output',
+        start: [
+            'function fibonacci(n) {',
+            '  if (n <= 1) return n;',
+            '  return fibonacci(n - 1) + fibonacci(n - 2);',
+            '}',
+            '',
+            'const result = fibonacci(10);',
+            'console.log(`fib(10) = ${result}`);',
+            '',
+            '// TODO: implement memoization',
+            '// TODO: add input validation',
+            'function quickSort(arr) {',
+            '  if (arr.length <= 1) return arr;',
+            '  const pivot = arr[0];',
+            '  const left = arr.slice(1).filter(x => x < pivot);',
+            '  const right = arr.slice(1).filter(x => x >= pivot);',
+            '  return [...quickSort(left), pivot, ...quickSort(right)];',
+            '}',
+            '',
+            'console.log(quickSort([3, 6, 8, 10, 1, 2, 1]));',
+        ],
+        target: [
+            'function fib(n) {',
+            '  if (n <= 1) return n;',
+            '  return fib(n - 1) + fib(n - 2);',
+            '}',
+            '',
+            'const output = fib(10);',
+            'console.log(`fib(10) = ${output}`);',
+            '',
+            '// TODO: implement memoization',
+            '// TODO: add input validation',
+            'function quickSort(arr) {',
+            '  if (arr.length <= 1) return arr;',
+            '  const pivot = arr[0];',
+            '  const left = arr.slice(1).filter(x => x < pivot);',
+            '  const right = arr.slice(1).filter(x => x >= pivot);',
+            '  return [...quickSort(left), pivot, ...quickSort(right)];',
+            '}',
+            '',
+            'console.log(quickSort([3, 6, 8, 10, 1, 2, 1]));',
+        ],
+    },
+];
+
 // --- State ---
 const state = {
     buffer: [],
@@ -14,6 +340,11 @@ const state = {
     pendingOperator: null, // 'd' | 'c' | 'y' | null — for future operators
     pendingTextObject: null, // 'i' | 'a' — set while waiting for object char (e.g. 'w')
     pendingG: false,         // true while waiting for the 2nd key of gg/ge/gE (kept out of inputBuffer so a count can coexist)
+    pendingFind: null,       // { motion, count } while waiting for the find char of f/F/t/T
+    pendingReplace: null,    // count (number) while waiting for the replacement char of r
+    lastFind: null,          // { motion, char } of the last f/F/t/T (used by ; and ,)
+    commandMode: false,      // true while typing a `:` command-line
+    commandInput: '',        // buffer for the `:` command being typed
     register: { text: null, linewise: false }, // unnamed register
     undoStack: [],         // array of { buffer, cursor } snapshots
     redoStack: [],         // array of { buffer, cursor } snapshots
@@ -22,6 +353,8 @@ const state = {
     pendingInsertRecord: null, // for `i`/`a` sessions: gets promoted to lastChange on first keystroke
     statusMsg: '',
     inputBuffer: '',       // accumulates keys for multi-key commands
+    targetBuffer: [],      // the reference text the player must match
+    currentChallenge: 0,   // index into CHALLENGES
 };
 
 // --- Initialize Buffer ---
@@ -51,6 +384,66 @@ function initBuffer() {
     for (let i = 0; i < ROWS; i++) {
         state.buffer[i] = lines[i] || '';
     }
+}
+
+// --- Challenge / Target Buffer ---
+function initChallenge(index) {
+    const ch = CHALLENGES[index] || CHALLENGES[0];
+    state.currentChallenge = index;
+    state.buffer = [];
+    state.targetBuffer = [];
+    for (let i = 0; i < ROWS; i++) {
+        state.buffer[i] = (ch.start[i] || '').slice(0, COLS);
+        state.targetBuffer[i] = (ch.target[i] || '').slice(0, COLS);
+    }
+    state.cursor = { row: 0, col: 0 };
+    state.undoStack = [];
+    state.redoStack = [];
+    state.lastChange = null;
+    state.register = { text: null, linewise: false };
+    state.lastFind = null;
+    state.pendingReplace = null;
+    state.statusMsg = ch.hint;
+}
+
+// Compare active buffer to target cell-by-cell.
+// Returns { grid: string[][], matchCount, totalCells }
+// grid[r][c] = 'match' | 'diff'
+function computeDiff() {
+    const grid = [];
+    let matchCount = 0;
+    let totalCells = 0;
+    for (let r = 0; r < ROWS; r++) {
+        const aLine = state.buffer[r] || '';
+        const tLine = state.targetBuffer[r] || '';
+        const rowDiff = [];
+        const maxLen = Math.max(aLine.length, tLine.length);
+        for (let c = 0; c < COLS; c++) {
+            if (c >= maxLen) {
+                rowDiff.push('empty');
+            } else {
+                totalCells++;
+                const aCh = c < aLine.length ? aLine[c] : '';
+                const tCh = c < tLine.length ? tLine[c] : '';
+                if (aCh === tCh) {
+                    rowDiff.push('match');
+                    matchCount++;
+                } else {
+                    rowDiff.push('diff');
+                }
+            }
+        }
+        grid.push(rowDiff);
+    }
+    return { grid, matchCount, totalCells };
+}
+
+// Quick check: does the active buffer exactly match the target?
+function buffersMatch() {
+    for (let r = 0; r < ROWS; r++) {
+        if ((state.buffer[r] || '') !== (state.targetBuffer[r] || '')) return false;
+    }
+    return true;
 }
 
 // --- Utilities ---
@@ -313,7 +706,11 @@ function setMode(mode) {
     state.pendingOperator = null;
     state.pendingTextObject = null;
     state.pendingG = false;
+    state.pendingFind = null;
+    state.pendingReplace = null;
     state.inputBuffer = '';
+    state.commandMode = false;
+    state.commandInput = '';
     // Leaving insert without typing: discard the deferred insert record so `.` doesn't replay an empty no-op
     if (mode !== 'insert') state.pendingInsertRecord = null;
     updateModeDisplay();
@@ -362,6 +759,14 @@ const MOTION_INFO = {
 // For charwise: [startRow.startCol .. endRow.endCol] inclusive.
 // For linewise: whole rows from startRow to endRow.
 function computeRange(motion, start, end) {
+    // `%` is an inclusive motion spanning the two matching brackets on one line.
+    // The jump may be forward or backward, so the span is order-independent. A
+    // no-match repeat leaves start === end, which yields no range (nothing to do).
+    if (motion === '%') {
+        if (!end || start.row !== end.row || start.col === end.col) return null;
+        return { linewise: false, startRow: start.row, endRow: start.row,
+                 startCol: Math.min(start.col, end.col), endCol: Math.max(start.col, end.col) };
+    }
     const info = MOTION_INFO[motion];
     if (!info) return null;
 
@@ -595,6 +1000,138 @@ function bracketRange(prefix, openCh, closeCh) {
     return { linewise: false, startRow: row, startCol: aStart, endRow: row, endCol: close };
 }
 
+// --- Match Bracket (`%`) ---
+// Single-line bracket matching, consistent with the single-line text-object scope
+// (see VIM_DIFFERENCES.md §2.1). `%` jumps between matching (), {}, []. When the
+// cursor sits on a bracket, it goes to that bracket's mate; when it sits elsewhere,
+// it scans forward on the line for the first bracket that has a match and jumps to
+// that match's partner (like Vim's default forward search).
+const OPEN_BRACKETS = { '(': ')', '{': '}', '[': ']' };
+const CLOSE_BRACKETS = { ')': '(', '}': '{', ']': '[' };
+
+function isBracketChar(ch) {
+    return !!OPEN_BRACKETS[ch] || !!CLOSE_BRACKETS[ch];
+}
+
+// Index of the mate of the bracket at column i on `line`, or -1 if unbalanced.
+function bracketMate(line, i) {
+    const ch = line[i];
+    if (OPEN_BRACKETS[ch]) return findMatchedClose(line, i, ch, OPEN_BRACKETS[ch]);
+    if (CLOSE_BRACKETS[ch]) return findMatchedOpen(line, i, CLOSE_BRACKETS[ch], ch);
+    return -1;
+}
+
+// Destination of `%` from the cursor: { row, col } of the matching bracket, or null
+// when no match exists on the line.
+function moveToMatchBracket(cur) {
+    const row = cur.row;
+    const line = state.buffer[row] || '';
+    if (isBracketChar(line[cur.col])) {
+        const m = bracketMate(line, cur.col);
+        return m >= 0 ? { row, col: m } : null;
+    }
+    // Not on a bracket: scan forward for the first bracket that has a match.
+    for (let i = cur.col + 1; i < line.length; i++) {
+        if (isBracketChar(line[i])) {
+            const m = bracketMate(line, i);
+            if (m >= 0) return { row, col: m };
+        }
+    }
+    return null;
+}
+
+// --- Find In Line (`f` / `F` / `t` / `T`) ---
+// Single-line search motions (see VIM_DIFFERENCES.md). `motion` is 'f' (forward,
+// land on the char), 'F' (backward, land on), 't' (forward, land just before),
+// 'T' (backward, land just after). `count` selects the Nth occurrence. Returns the
+// landing { row, col } or null when the Nth occurrence is not found.
+// Mirror a find motion to its opposite direction (for the `,` command).
+function mirrorFind(m) {
+    return m === 'f' ? 'F' : m === 'F' ? 'f' : m === 't' ? 'T' : m === 'T' ? 't' : m;
+}
+
+function findInLine(cur, ch, motion, count) {
+    const line = state.buffer[cur.row] || '';
+    const forward = (motion === 'f' || motion === 't');
+    const inclusive = (motion === 'f' || motion === 'F');
+    const n = Math.max(1, count || 1);
+    const step = forward ? 1 : -1;
+    let hits = 0;
+    let i = cur.col;
+    while (i + step >= 0 && i + step < line.length) {
+        i += step;
+        if (line[i] === ch) {
+            hits++;
+            if (hits === n) {
+                // Exclusive (t/T): land one step back toward the cursor.
+                const col = inclusive ? i : i - step;
+                return { row: cur.row, col };
+            }
+        }
+    }
+    return null;
+}
+
+// Inclusive single-line operator span for a find motion. Because the exclusive
+// (t/T) landing is already one step off the found char, the delete span is simply
+// forward → [start.col .. dest.col] or backward → [dest.col .. start.col-1].
+function findOpRange(motion, start, dest) {
+    if (!dest || start.row !== dest.row) return null;
+    if (motion === 'f' || motion === 't') {
+        if (dest.col < start.col) return null;
+        return { linewise: false, startRow: start.row, startCol: start.col,
+                 endRow: start.row, endCol: dest.col };
+    }
+    // backward (F / T)
+    const endCol = start.col - 1;
+    if (dest.col > endCol) return null;
+    return { linewise: false, startRow: start.row, startCol: dest.col,
+             endRow: start.row, endCol };
+}
+
+// Execute a find motion: plain jump, or apply the pending operator over its range.
+function doFind(motion, count, ch) {
+    const oldPos = { ...state.cursor };
+    const dest = findInLine(state.cursor, ch, motion, count);
+    if (!dest) {
+        state.statusMsg = 'pattern not found: ' + ch;
+        if (state.mode === 'operator-pending') setMode('normal');
+        render();
+        return;
+    }
+    if (state.mode === 'operator-pending') {
+        const range = findOpRange(motion, oldPos, dest);
+        state.cursor = dest;
+        clampCursor();
+        if (state.pendingOperator === 'd') {
+            if (range) {
+                applyDelete(range);
+                state.lastChange = { kind: 'op-find', op: 'd', motion, char: ch, count };
+            }
+            setMode('normal');
+        } else if (state.pendingOperator === 'c') {
+            if (range) {
+                applyChange(range);
+                state.lastChange = { kind: 'op-find', op: 'c', motion, char: ch, count, typed: '' };
+            } else {
+                setMode('normal');
+            }
+        } else if (state.pendingOperator === 'y') {
+            if (range) applyYank(range);
+            state.cursor = oldPos;
+            setMode('normal');
+        }
+        clampCursor();
+        state.statusMsg = '';
+        render();
+    } else {
+        state.cursor = dest;
+        clampCursor();
+        state.statusMsg = '';
+        render();
+    }
+}
+
 // --- Motion Destination (pure: just computes where a motion lands) ---
 function motionDest(movement) {
     switch (movement) {
@@ -614,6 +1151,7 @@ function motionDest(movement) {
         case '$': return { row: state.cursor.row, col: endOfLine(state.cursor.row) };
         case 'gg': return { row: 0, col: firstNonBlank(0) };
         case 'G': return { row: lastNonEmptyRow(), col: firstNonBlank(lastNonEmptyRow()) };
+        case '%': return moveToMatchBracket(state.cursor);
         default: return null;
     }
 }
@@ -757,6 +1295,22 @@ function doRepeatOnce(rec) {
     const t = rec.typed || '';
 
     switch (rec.kind) {
+        case 'op-find': {
+            // Re-run the find motion at the current cursor, then apply the operator.
+            const dest = findInLine(c, rec.char, rec.motion, rec.count || 1);
+            if (!dest) return;
+            const range = findOpRange(rec.motion, c, dest);
+            if (!range) return;
+            state.cursor = dest;
+            clampCursor();
+            if (rec.op === 'd') {
+                applyDelete(range);
+            } else if (rec.op === 'c') {
+                applyChange(range);
+                insertRecordedText(rec.typed || '');
+            }
+            break;
+        }
         case 'op-motion': {
             // Walk through motion `count` times, compute range, apply operator
             const oldPos = { ...c };
@@ -812,6 +1366,28 @@ function doRepeatOnce(rec) {
                     state.buffer[c.row] = line.slice(0, c.col) + line.slice(c.col + 1);
                 }
             }
+            break;
+        }
+        case 'replace': {
+            // Replay `r{char}`: overwrite rec.count chars starting at the cursor.
+            const line = state.buffer[c.row] || '';
+            if (c.col >= line.length) return;
+            pushUndo();
+            const arr = line.split('');
+            let changed = 0;
+            for (let n = 0; n < (rec.count || 1) && c.col + n < arr.length; n++) { arr[c.col + n] = rec.char; changed++; }
+            state.buffer[c.row] = arr.join('');
+            c.col = c.col + changed - 1;
+            break;
+        }
+        case 'op-chars': {
+            // Replay `s`: change rec.count chars under the cursor + re-type.
+            const line = state.buffer[c.row] || '';
+            if (line.length === 0 || c.col >= line.length) return;
+            const endCol = Math.min(line.length - 1, c.col + (rec.count || 1) - 1);
+            const range = { startRow: c.row, startCol: c.col, endRow: c.row, endCol };
+            applyChange(range);
+            insertRecordedText(t);
             break;
         }
         case 'paste': {
@@ -883,6 +1459,13 @@ function insertRecordedText(t, fromInsert = false) {
                 const line = state.buffer[c.row];
                 state.buffer[c.row] = line.slice(0, c.col - 1) + line.slice(c.col);
                 c.col--;
+            }
+        } else if (ch === '\x7f') {
+            // Recorded in-line forward delete: delete the char at/after the caret
+            // without moving the caret.
+            const line = state.buffer[c.row];
+            if (c.col < line.length) {
+                state.buffer[c.row] = line.slice(0, c.col) + line.slice(c.col + 1);
             }
         } else {
             const line = state.buffer[c.row];
@@ -1123,6 +1706,26 @@ function handleInsertKey(e) {
         return;
     }
 
+    if (key === 'Delete') {
+        const c = state.cursor;
+        const line = state.buffer[c.row] || '';
+        if (c.col < line.length) {
+            // Forward delete: remove the char at the caret; caret stays put.
+            state.buffer[c.row] = line.slice(0, c.col) + line.slice(c.col + 1);
+            // Record so `.` reproduces the net typed text.
+            if (state.lastChange && 'typed' in state.lastChange) state.lastChange.typed += '\x7f';
+        } else if (c.row < ROWS - 1 && (state.buffer[c.row + 1] || '').length > 0) {
+            // At end-of-line: delete the newline by joining the next line up (matches
+            // Vim's <Del>). Not recorded in `typed`: reproducing a cross-line join
+            // inside a `.` replay is out of scope (same limitation as Backspace).
+            state.buffer[c.row] = clipCols(line + state.buffer[c.row + 1]);
+            state.buffer.splice(c.row + 1, 1);
+            state.buffer.push('');
+        }
+        render();
+        return;
+    }
+
     if (key === 'Enter') {
         const c = state.cursor;
         // Fixed-height grid: there is no row below the last one, so Enter at the
@@ -1155,8 +1758,59 @@ function handleInsertKey(e) {
 }
 
 
+// --- Replace (`r`) helper ---
+// Replace up to `count` chars starting at the cursor with `ch` (in-line only,
+// stops at end of line). Stays in normal mode; cursor ends on the last replaced
+// char (Vim behavior). One undo unit. Registered in lastChange for `.` replay.
+function doReplace(count, ch) {
+    const c = state.cursor;
+    const line = state.buffer[c.row] || '';
+    if (c.col >= line.length) { state.statusMsg = ''; render(); return; }
+    pushUndo();
+    const arr = line.split('');
+    let changed = 0;
+    for (let n = 0; n < count && c.col + n < arr.length; n++) { arr[c.col + n] = ch; changed++; }
+    state.buffer[c.row] = arr.join('');
+    c.col = c.col + changed - 1; // land on the last replaced char
+    clampCursor();
+    state.lastChange = { kind: 'replace', char: ch, count: changed };
+    state.statusMsg = '';
+    render();
+}
+
 // --- Normal Mode ---
 function handleNormalKey(e) {
+    // If waiting for the find char of f/F/t/T, the next key is the search char
+    // (taken raw, so it is not aliased). Escape or a non-character cancels.
+    if (state.pendingFind) {
+        const pf = state.pendingFind;
+        state.pendingFind = null;
+        if (e.key === 'Escape' || e.key.length !== 1) {
+            if (state.mode === 'operator-pending') setMode('normal');
+            state.statusMsg = '';
+            render();
+            return;
+        }
+        // Record the last find so `;` / `,` can repeat it (even for operator forms).
+        state.lastFind = { motion: pf.motion, char: e.key };
+        doFind(pf.motion, pf.count, e.key);
+        return;
+    }
+
+    // If waiting for the replacement char of `r`, the next key is the replacement
+    // (taken raw). Escape or a non-character cancels.
+    if (state.pendingReplace !== null) {
+        const count = state.pendingReplace;
+        state.pendingReplace = null;
+        if (e.key === 'Escape' || e.key.length !== 1) {
+            state.statusMsg = '';
+            render();
+            return;
+        }
+        doReplace(count, e.key);
+        return;
+    }
+
     let key = e.key;
 
     // Aliases: arrow keys act as hjkl; Backspace acts as h in normal mode
@@ -1165,6 +1819,7 @@ function handleNormalKey(e) {
     else if (key === 'ArrowUp') key = 'k';
     else if (key === 'ArrowDown') key = 'j';
     else if (key === 'Backspace') key = 'h';
+    else if (key === 'Delete') key = 'x'; // Del deletes the char under the cursor (as in Vim)
 
     // Escape cancels operator-pending and any pending count prefix
     if (key === 'Escape') {
@@ -1300,6 +1955,44 @@ function handleNormalKey(e) {
         render(); return;
     }
 
+    // s — substitute [count] chars under cursor and enter insert mode (Vim: s == cl)
+    if (key === 's') {
+        if (state.mode === 'operator-pending') setMode('normal'); // s is a command, not a motion
+        if (state.mode !== 'normal') return;
+        let count = state.inputBuffer ? parseInt(state.inputBuffer) : 1;
+        state.inputBuffer = '';
+        state.pendingG = false;
+        if (!count || count < 1) count = 1;
+        const c = state.cursor;
+        const line = state.buffer[c.row] || '';
+        if (line.length === 0 || c.col >= line.length) {
+            // Nothing under the cursor to substitute (at/beyond EOL): behave like `i`
+            // — enter insert without deleting. Divergence from Vim's EOL error is noted.
+            state.insertTouched = false;
+            state.pendingInsertRecord = { kind: 'insert', direction: 'before', typed: '' };
+            setMode('insert'); state.statusMsg = ''; render(); return;
+        }
+        const endCol = Math.min(line.length - 1, c.col + count - 1);
+        const range = { startRow: c.row, startCol: c.col, endRow: c.row, endCol };
+        applyChange(range); // pushes undo, deletes the chars, enters insert at startCol
+        state.insertTouched = true; // delete+typed text share one undo unit (like o/O)
+        state.lastChange = { kind: 'op-chars', op: 'c', count, typed: '' };
+        render(); return;
+    }
+
+    // r — replace [count] chars under cursor with a single typed char (stays normal mode)
+    if (key === 'r') {
+        if (state.mode === 'operator-pending') setMode('normal');
+        if (state.mode !== 'normal') return;
+        let count = state.inputBuffer ? parseInt(state.inputBuffer) : 1;
+        state.inputBuffer = '';
+        state.pendingG = false;
+        if (!count || count < 1) count = 1;
+        state.pendingReplace = count;
+        state.statusMsg = (count > 1 ? count : '') + 'r …';
+        render(); return;
+    }
+
     // u — undo (honors count: 3u undoes three times)
     if (key === 'u') {
         const count = state.inputBuffer ? parseInt(state.inputBuffer) : 1;
@@ -1327,6 +2020,18 @@ function handleNormalKey(e) {
         state.inputBuffer = '';
         if (state.mode !== 'normal') setMode('normal'); // cancel any pending operator first
         repeatLastChange(count);
+        return;
+    }
+
+    // : — enter command-line mode (e.g. `:wq` to finish a challenge). Cancels a
+    // pending operator if one is active.
+    if (key === ':') {
+        if (state.mode === 'operator-pending') setMode('normal');
+        if (state.mode !== 'normal') return;
+        state.commandMode = true;
+        state.commandInput = '';
+        state.statusMsg = ':';
+        render();
         return;
     }
 
@@ -1383,6 +2088,81 @@ function handleNormalKey(e) {
         return;
     }
 
+    // f / F / t / T — find-in-line. Enter a mini state waiting for the search char.
+    // Honors a count prefix (2fx = 2nd occurrence); works in normal and operator-pending.
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T') {
+        const count = state.inputBuffer ? parseInt(state.inputBuffer, 10) : 1;
+        state.inputBuffer = '';
+        state.pendingG = false;
+        state.pendingFind = { motion: key, count };
+        const op = state.mode === 'operator-pending' ? state.pendingOperator : '';
+        state.statusMsg = op + (count > 1 ? count : '') + key + ' ...';
+        return;
+    }
+
+    // ; / , — repeat the last find forward (;) or in the opposite direction (,).
+    // Honors a count (2; skips two). Usable as a motion too (d;, c;, y;).
+    if (key === ';' || key === ',') {
+        const count = state.inputBuffer ? parseInt(state.inputBuffer, 10) : 1;
+        state.inputBuffer = '';
+        state.pendingG = false;
+        if (!state.lastFind) {
+            state.statusMsg = 'no previous find';
+            render();
+            return;
+        }
+        const motion = key === ';' ? state.lastFind.motion : mirrorFind(state.lastFind.motion);
+        doFind(motion, count, state.lastFind.char);
+        return;
+    }
+
+    // % — jump to matching bracket (single-line). Ignored count (a count before %
+    // does not repeat the jump, unlike other motions). Inclusive for operators.
+    if (key === '%') {
+        state.inputBuffer = '';
+        state.pendingG = false;
+        const oldPos = { ...state.cursor };
+        const dest = moveToMatchBracket(state.cursor);
+        if (!dest) {
+            state.statusMsg = 'no matching bracket';
+            if (state.mode === 'operator-pending') setMode('normal');
+            render();
+            return;
+        }
+        if (state.mode === 'operator-pending') {
+            const range = computeRange('%', oldPos, dest);
+            state.cursor = dest;
+            clampCursor();
+            if (state.pendingOperator === 'd') {
+                if (range) {
+                    applyDelete(range);
+                    state.lastChange = { kind: 'op-motion', op: 'd', motion: '%', count: 1 };
+                }
+                setMode('normal');
+            } else if (state.pendingOperator === 'c') {
+                if (range) {
+                    applyChange(range);
+                    state.lastChange = { kind: 'op-motion', op: 'c', motion: '%', count: 1, typed: '' };
+                } else {
+                    setMode('normal');
+                }
+            } else if (state.pendingOperator === 'y') {
+                if (range) applyYank(range);
+                state.cursor = oldPos;
+                setMode('normal');
+            }
+            clampCursor();
+            state.statusMsg = '';
+            render();
+        } else {
+            state.cursor = dest;
+            clampCursor();
+            state.statusMsg = '';
+            render();
+        }
+        return;
+    }
+
     // Movement keys
     if ('hjklwbWBeE$0'.includes(key)) {
         const count = state.inputBuffer ? parseInt(state.inputBuffer) : 1;
@@ -1430,6 +2210,83 @@ function handleNormalKey(e) {
     state.pendingG = false; // an unrecognized command cancels a pending 'g' sequence
 }
 
+
+// --- Command-line Mode (`:`) ---
+// Types a command after `:`. Enter runs it; Escape (or Backspace past the colon)
+// cancels. Recognized commands are game-flavored: `:wq` / `:x` advance to the next
+// challenge once the current one is solved (`!` forces the skip).
+function handleCommandKey(e) {
+    const key = e.key;
+    if (key === 'Escape') {
+        state.commandMode = false;
+        state.commandInput = '';
+        state.statusMsg = '';
+        render();
+        return;
+    }
+    if (key === 'Enter') {
+        runCommand(state.commandInput.trim());
+        return;
+    }
+    if (key === 'Backspace') {
+        state.commandInput = state.commandInput.slice(0, -1);
+        if (state.commandInput.length === 0) {
+            // Backspacing past the colon exits command-line mode, like Vim.
+            state.commandMode = false;
+            state.statusMsg = '';
+        } else {
+            state.statusMsg = ':' + state.commandInput;
+        }
+        render();
+        return;
+    }
+    if (key.length === 1) {
+        state.commandInput += key;
+        state.statusMsg = ':' + state.commandInput;
+        render();
+    }
+}
+
+// Advance to the next challenge (wrapping around) and re-focus the editor.
+function advanceChallenge() {
+    const next = (state.currentChallenge + 1) % CHALLENGES.length;
+    loadChallenge(next);
+    state.statusMsg = '✓ Solved! Now: ' + CHALLENGES[next].name;
+    render();
+}
+
+// Interpret a typed `:` command (without the leading colon).
+function runCommand(cmd) {
+    state.commandMode = false;
+    state.commandInput = '';
+    if (cmd === '') {
+        state.statusMsg = '';
+        render();
+        return;
+    }
+    const force = cmd.endsWith('!');
+    const base = force ? cmd.slice(0, -1) : cmd;
+    const isQuit = base === 'wq' || base === 'x' || base === 'wqa';
+
+    if (isQuit) {
+        if (buffersMatch()) {
+            advanceChallenge();
+        } else if (force) {
+            advanceChallenge(); // `!` skips even when unsolved
+        } else {
+            const diff = computeDiff();
+            const remaining = diff.totalCells - diff.matchCount;
+            state.statusMsg = 'not solved — ' + remaining +
+                ' char' + (remaining !== 1 ? 's' : '') + ' to fix (use :wq! to skip)';
+            render();
+        }
+        return;
+    }
+    if (base === 'q') { state.statusMsg = 'use :wq to finish a challenge'; render(); return; }
+    if (base === 'w') { state.statusMsg = 'buffer is virtual — nothing to write'; render(); return; }
+    state.statusMsg = 'not an editor: :' + cmd;
+    render();
+}
 
 // --- Pending Text Object Mode ---
 // Reached after `d`/`c`/`y` then `i` or `a`. Waiting for object char (e.g. `w`).
@@ -1502,10 +2359,71 @@ function render() {
     document.getElementById('cursor-pos').textContent =
         'Ln ' + (state.cursor.row + 1) + ', Col ' + (state.cursor.col + 1);
     document.getElementById('status-msg').textContent = state.statusMsg;
+
+    renderReference();
+}
+
+// --- Reference Panel Render ---
+function renderReference() {
+    const refTerminal = document.getElementById('reference-terminal');
+    if (!refTerminal) return;
+    refTerminal.innerHTML = '';
+
+    const diff = computeDiff();
+    const accuracy = diff.totalCells > 0
+        ? Math.round((diff.matchCount / diff.totalCells) * 100)
+        : 100;
+
+    for (let r = 0; r < ROWS; r++) {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'terminal-row';
+        const line = state.targetBuffer[r] || '';
+
+        for (let c = 0; c < COLS; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'terminal-cell reference-cell';
+            cell.textContent = c < line.length ? line[c] : '';
+
+            const d = diff.grid[r][c];
+            if (d === 'match') cell.classList.add('match');
+            else if (d === 'diff') cell.classList.add('diff');
+
+            rowEl.appendChild(cell);
+        }
+        refTerminal.appendChild(rowEl);
+    }
+
+    // Update accuracy badge
+    const badge = document.getElementById('accuracy-badge');
+    if (badge) {
+        badge.textContent = accuracy + '%';
+        badge.className = 'accuracy-badge' + (accuracy === 100 ? ' complete' : '');
+    }
+
+    // Update challenge picker (reflect current challenge in the dropdown)
+    const sel = document.getElementById('challenge-select');
+    if (sel && sel.value !== String(state.currentChallenge)) {
+        sel.value = String(state.currentChallenge);
+    }
+
+    // Win detection
+    const refStatus = document.getElementById('reference-status');
+    if (refStatus) {
+        if (accuracy === 100) {
+            refStatus.textContent = '✓ Challenge Complete!';
+            refStatus.className = 'ref-win';
+        } else {
+            const diffCount = diff.totalCells - diff.matchCount;
+            refStatus.textContent = diffCount + ' char' + (diffCount !== 1 ? 's' : '') + ' to fix';
+            refStatus.className = '';
+        }
+    }
 }
 
 // --- Key Dispatcher ---
 function handleKeyDown(e) {
+    // Let the challenge dropdown (or any form control) keep native key handling.
+    if (e.target && (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT')) return;
     // Ctrl+R = redo (only Ctrl binding we intercept; everything else passes through to browser)
     if (e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'r' || e.key === 'R')) {
         e.preventDefault();
@@ -1528,7 +2446,9 @@ function handleKeyDown(e) {
         return;
     }
     e.preventDefault();
-    if (state.mode === 'insert') {
+    if (state.commandMode) {
+        handleCommandKey(e);
+    } else if (state.mode === 'insert') {
         handleInsertKey(e);
     } else if (state.mode === 'pending-text-object') {
         handleTextObjectKey(e);
@@ -1538,9 +2458,34 @@ function handleKeyDown(e) {
 }
 
 // --- Init ---
-function init() {
-    initBuffer();
+// Load a challenge by index and return keyboard focus to the editor.
+function loadChallenge(index) {
+    initChallenge(index);
     setMode('normal');
+    render();
+    const terminal = document.getElementById('terminal');
+    if (terminal) terminal.focus();
+}
+
+// Populate the challenge dropdown and wire it up (browser only).
+function buildChallengePicker() {
+    const sel = document.getElementById('challenge-select');
+    if (!sel) return;
+    sel.innerHTML = '';
+    CHALLENGES.forEach((ch, i) => {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = (i + 1) + '. ' + ch.name;
+        sel.appendChild(opt);
+    });
+    sel.value = String(state.currentChallenge);
+    sel.addEventListener('change', () => loadChallenge(parseInt(sel.value, 10)));
+}
+
+function init() {
+    initChallenge(0);
+    setMode('normal');
+    buildChallengePicker();
     render();
     const terminal = document.getElementById('terminal');
     terminal.tabIndex = 0;
@@ -1592,6 +2537,13 @@ if (typeof module !== 'undefined' && module.exports) {
         handleInsertKey,
         handleTextObjectKey,
         handleKeyDown,
+        CHALLENGES,
+        initChallenge,
+        computeDiff,
+        buffersMatch,
+        moveToMatchBracket,
+        findInLine,
+        findOpRange,
     };
 }
 

@@ -8,6 +8,7 @@
 </head>
 <body>
     <div class="container">
+        <div class="buffers-row">
         <div class="vim-panel">
             <div class="vim-header">
                 <span class="mode-badge" id="mode-badge">NORMAL</span>
@@ -19,6 +20,17 @@
                 <span id="status-msg"></span>
             </div>
         </div>
+        <div class="reference-panel">
+            <div class="reference-header">
+                <select class="challenge-select" id="challenge-select" aria-label="Choose challenge"></select>
+                <span class="accuracy-badge" id="accuracy-badge">0%</span>
+            </div>
+            <div class="terminal reference-terminal" id="reference-terminal"></div>
+            <div class="status-line reference-footer">
+                <span id="reference-status"></span>
+            </div>
+        </div>
+        </div>
         <div class="cheatsheet">
             <div class="cheat-header">
                 <span class="cheat-logo">V</span>
@@ -28,6 +40,7 @@
                 </div>
             </div>
 
+            <div class="cheat-grid">
             <div class="cheat-section cat-modes">
                 <h3><span class="cat-icon">⬤</span> Modes</h3>
                 <table>
@@ -60,6 +73,9 @@
                     <tr><td><kbd>$</kbd></td><td>End of line</td></tr>
                     <tr><td><kbd>gg</kbd><span class="alt-keys">/ <kbd>5gg</kbd></span></td><td>Top of file / line 5</td></tr>
                     <tr><td><kbd>G</kbd><span class="alt-keys">/ <kbd>5G</kbd></span></td><td>Bottom of file / line 5</td></tr>
+                    <tr><td><kbd>%</kbd></td><td>Jump to matching bracket</td></tr>
+                    <tr><td><kbd>f</kbd><kbd>F</kbd><kbd>t</kbd><kbd>T</kbd></td><td>Find char (on / before) in line</td></tr>
+                    <tr><td><kbd>;</kbd><kbd>,</kbd></td><td>Repeat find (same / opposite)</td></tr>
                 </table>
             </div>
 
@@ -82,6 +98,8 @@
                     <tr><td><kbd>p</kbd></td><td>Paste after cursor</td></tr>
                     <tr><td><kbd>P</kbd></td><td>Paste before cursor</td></tr>
                     <tr><td><kbd>x</kbd></td><td>Delete char</td></tr>
+                    <tr><td><kbd>r</kbd><span class="combo">+ char</span></td><td>Replace char under cursor</td></tr>
+                    <tr><td><kbd>s</kbd></td><td>Substitute char (delete + insert)</td></tr>
                 </table>
             </div>
 
@@ -93,12 +111,14 @@
                     <tr><td><kbd>Ctrl</kbd><span class="plus">+</span><kbd>R</kbd></td><td>Redo</td></tr>
                     <tr><td><kbd>.</kbd></td><td>Repeat last change</td></tr>
                     <tr><td><kbd>3</kbd><kbd>.</kbd></td><td>Repeat 3 times</td></tr>
+                    <tr><td><kbd>:</kbd><kbd>w</kbd><kbd>q</kbd></td><td>Next challenge (when solved)</td></tr>
                 </table>
             </div>
 
             <div class="cheat-section cat-notes">
                 <h3><span class="cat-icon">💡</span> Tips</h3>
                 <p>Operators combine with motions and text objects (e.g. <code>dw</code>, <code>ciw</code>). Most mutations are repeatable with <code>.</code> Prefix a line jump with a number (<code>5G</code>), and arrow keys move the caret while in insert mode.</p>
+            </div>
             </div>
         </div>
     </div>

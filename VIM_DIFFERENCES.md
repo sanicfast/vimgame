@@ -18,16 +18,26 @@ Run the suite with `npm test`.
 - **Modes:** `normal`, `insert`, plus internal `operator-pending` / `pending-text-object`.
   There is **no visual mode.**
 - **Motions:** `h` `j` `k` `l`, `w` `b` `e`, `W` `B` `E`, `ge` `gE`, `0` `$`, `gg` `G`
-  (`G` jumps to the last *non-empty* line, like Vim's end-of-file).
+  (`G` jumps to the last *non-empty* line, like Vim's end-of-file), `%` (match
+  bracket, single-line — see §2.8), and `f` `F` `t` `T` (find-in-line, single-line,
+  honoring a count for the Nth occurrence) with `;` / `,` repeat (same / opposite
+  direction) — see §2.9.
 - **Operators:** `d` (delete), `c` (change), `y` (yank), `x` (delete char), `p` / `P`
-  (paste). Doubled forms `dd` / `cc` / `yy` work as line operations.
+  (paste). Doubled forms `dd` / `cc` / `yy` work as line operations. Single-char edits
+  `r{char}` (replace) and `s` (substitute → change + insert) are supported (see §2.10). In
+  normal mode the `Del` key acts as `x` (deletes the char under the cursor).
 - **Text objects:** `iw` / `aw` (word) and bracket blocks — `i(`/`a(`, `i{`/`a{`,
   `i[`/`a[` (with the `)`, `}`, `]`, `b`, `B` aliases) — usable with `d` / `c` / `y`.
 - **Insert entry:** `i` `a` `I` `A`, and `o` / `O` (open line).
-- **Insert editing:** printable chars, `Enter` (split line), `Backspace`, `Esc`.
+- **Insert editing:** printable chars, `Enter` (split line), `Backspace` (delete left /
+  join at col 0), `Del` (delete right / join at EOL), `Esc`.
 - **History:** `.` dot-repeat, `u` undo, `Ctrl-R` redo.
 - **Counts:** numeric prefixes on operators and motions — including line jumps
   (`5G` / `5gg`) and repeated `2ge` / `2gE` (e.g. `2dw`, `3.`, `2dd`, `2p`).
+- **Command-line:** `:` opens a minimal command line. This is a **game action**, not
+  the Vim editor command: `:wq` / `:x` advance to the next challenge (only when the
+  current one is solved; `:wq!` skips). `:q` / `:w` print friendly hints and anything
+  else reports `not an editor: :<cmd>`.
 
 Everything else below is a **gap or a difference.**
 
@@ -115,6 +125,79 @@ session, so you can reposition and keep typing. This is a deliberate convenience
 game UI, not a behavior to match Vim.
 *Asserted in:* `tests/insert.test.js` → "insert mode — arrow keys move the caret".
 
+### 2.8 `%` (match bracket) is strictly single-line
+`%` jumps between matching `()`, `{}`, `[]`. Like the bracket text objects (§2.1), the
+pair must **open and close on the same line**; a bracket whose mate is on another line
+is treated as unbalanced and `%` does nothing (it reports `no matching bracket` and, in
+operator-pending, aborts the operator with no change).
+
+Behavioral notes:
+- When the cursor sits **on a bracket**, `%` goes to that bracket's depth-balanced mate.
+- When the cursor sits **elsewhere**, `%` scans **forward on the line** for the first
+  bracket that has a mate, then jumps to that mate's partner (this can land *behind* the
+  cursor, e.g. `%` inside `(foo)` jumps to the `(`). This mirrors Vim's default forward
+  search, restricted to the current line.
+- A **numeric count is ignored** — `3%` is a single jump, unlike motions that repeat.
+- As an operator motion (`d%` / `c%` / `y%`) the span is **inclusive of both brackets**,
+  matching Vim (`d%` on `(foo)` removes `(foo)`). Dot-repeat (`.`) re-applies at the
+  current cursor.
+
+*Why:* consistent single-line scoping across the whole bracket family; multi-line `%`
+would need buffer-spanning balance tracking (and is ambiguous with unmatched lines).
+*Asserted in:* `tests/matchbracket.test.js`.
+
+### 2.9 `f` / `F` / `t` / `T` (find-in-line) are strictly single-line
+`f{char}` / `F{char}` move onto the next / previous `{char}` on the **current line**;
+`t{char}` / `T{char}` land one character short of it (forward: just before; backward:
+just after). A numeric count picks the Nth occurrence (`3fx` → third `x` forward). As
+operator motions they are inclusive in the usual Vim sense: `df"` deletes **through**
+the found quote, `dt"` deletes **up to but not including** it (same for `dF"` / `dT"`
+backward). A missing occurrence is a no-op that reports `pattern not found`.
+
+Differences from real Vim:
+- **Single-line only** — the search never wraps to the next line (Vim's `f`/`t` are also
+  line-bound, so this matches; but unlike Vim there is no `cpoptions` line-scope toggle).
+- `;` repeats the last find in the **same** direction and `,` in the **opposite** direction
+  (f↔F, t↔T), both honoring a count (e.g. `2;`). The stored last-find is set only by an
+  explicit `f`/`F`/`t`/`T` — pressing `;`/`,` does not change the stored direction, so
+  `;` and `,` can be freely alternated (matching Vim).
+- Repeating an **exclusive** motion (`t`/`T`) with `;` re-searches from the current
+  cursor, so if the target is immediately adjacent it re-finds that same character and
+  does not move (the landing is one short of it). This is the direct consequence of
+  "repeat = issue the same command again from the cursor"; use `f`/`F` to hop cleanly
+  between occurrences of a character.
+- A **plain** `f`/`t` jump is not itself dot-repeatable (matching Vim: it's not a change);
+  an **operator** form (`dfx`, `ctx`, …) **is** dot-repeated (`.`), re-running the find at
+  the current cursor.
+
+*Why:* consistent single-line scoping with the rest of the motion set; the find char is
+captured in a `pendingFind` mini-state and reused by dot-repeat via a dedicated `op-find`
+record.
+*Asserted in:* `tests/find.test.js`.
+
+---
+
+### 2.10 `r` / `s` — single-character edits
+
+`r{char}` overwrites the character (or `[count]` characters) under the cursor with
+`{char}` and stays in normal mode, leaving the cursor on the **last** replaced char. It is
+one undo unit and is dot-repeatable (`.` re-applies the same replacement). It never
+crosses a line boundary and stops at end-of-line (so `5rz` on a 2-char line replaces just
+the available chars). Consistent with Vim, `r` does **not** modify the unnamed register.
+
+`s` deletes `[count]` chars under the cursor and enters insert mode (Vim's `s` == `cl`). The
+delete and the subsequently typed text form a **single** undo unit, and `s` + typing is
+dot-repeatable.
+
+Divergences from real Vim:
+- **`s` at/beyond end-of-line** enters insert mode at the cursor *without deleting* (Vim
+  raises `E486`/errors there). This keeps the key forgiving rather than erroring.
+- **`r` at/beyond end-of-line** is a no-op (nothing to replace), matching Vim's refusal.
+
+*Why:* both reuse the existing change/insert pipeline (`s` records an `op-chars` change;
+`r` a `replace` change) so counts, undo and dot-repeat fall out of the same machinery.
+*Asserted in:* `tests/replace.test.js`, and exercised by the "Fix the Typo" challenge.
+
 ---
 
 
@@ -128,20 +211,17 @@ workarounds:
 | `D` (delete to EOL) | no-op | `d$` |
 | `C` (change to EOL) | no-op | `c$` |
 | `Y` (yank line) | no-op | `yy` |
-| `s` (substitute char) | no-op | `cl` |
 | `S` (substitute line) | no-op | `cc` |
 | Visual / Select (`v`, `V`, `Ctrl-V`) | absent | (none) |
 | Search (`/`, `?`, `n`, `N`) | absent | (none) |
-| Find-in-line (`f`, `F`, `t`, `T`, `;`, `,`) | absent | (none) |
-| Match bracket (`%`) | absent | (none) |
 | Marks (`m`, backtick, `'`) | absent | (none) |
 | Indent operators (`>`, `<`, `=`) | absent | (none) |
 | Other text objects (`i"` `ip` `it` …) | only `iw`/`aw` + bracket blocks | (none) |
 | Named / special registers (`"a`, `"_`, `"+`) | only unnamed | (single register) |
 | Macros (`q`) | absent | (none) |
 
-Only `d`, `c`, `y` act as operators (plus `x`, `p`, `P`). Uppercase `D` / `C` / `Y` and
-`s` / `S` are **not** wired as operator shortcuts.
+Only `d`, `c`, `y` act as operators (plus `x`, `p`, `P`, and the single-char `r` / `s`).
+Uppercase `D` / `C` / `Y` and `S` are **not** wired as operator shortcuts.
 
 ---
 
