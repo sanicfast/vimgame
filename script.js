@@ -38,7 +38,7 @@ const CHALLENGES = [
     },
     {
         name: 'Add Semicolons',
-        hint: 'A appends at end of line; type ; then Esc, j, and . to repeat on each line',
+        hint: 'A appends at the end of a line — type ; then Esc, then j and . to repeat it on every line',
         start: [
             'let a = 1',
             'let b = 2',
@@ -52,7 +52,7 @@ const CHALLENGES = [
     },
     {
         name: 'Make It a List',
-        hint: 'I inserts at the first non-blank; type "- " then Esc, j, . for the next lines',
+        hint: 'I inserts at the first non-blank — type "- " then Esc, then j and . to bullet each line',
         start: [
             '  one',
             '  two',
@@ -66,7 +66,7 @@ const CHALLENGES = [
     },
     {
         name: 'Duplicate the Line',
-        hint: 'yy yanks the whole line, p puts a copy below it',
+        hint: 'yy copies the whole line (yank), then p pastes a duplicate just below it',
         start: [
             'first',
             'second',
@@ -105,7 +105,7 @@ const CHALLENGES = [
     },
     {
         name: 'Rewrite the Lines',
-        hint: 'cc changes the whole line to text you type; Esc, j, . repeats it below',
+        hint: 'cc wipes a whole line and lets you retype it — Esc, then j and . to rewrite the next one too',
         start: [
             'TODO fix',
             'TODO clean',
@@ -117,7 +117,7 @@ const CHALLENGES = [
     },
     {
         name: 'Reword the Comment',
-        hint: 'cc rewrites a whole line; do it on each line (no repeat needed since they differ)',
+        hint: 'cc wipes and retypes a whole line — do it on each line (they differ, so no repeat needed)',
         start: [
             '# compute result',
             '# build data',
@@ -129,7 +129,7 @@ const CHALLENGES = [
     },
     {
         name: 'Delete Two Words',
-        hint: '2dw deletes two words; j then . does the same on the next line',
+        hint: '2dw deletes two words at once — then j and . to do the same thing on the next line',
         start: [
             'alpha beta gamma',
             'delta eps zeta',
@@ -141,7 +141,7 @@ const CHALLENGES = [
     },
     {
         name: 'Remove the Dots',
-        hint: 'f. finds a dot, x deletes it, ; jumps to the next dot',
+        hint: 'f. jumps to the next dot, x deletes it, and ; hops to the following one — repeat till clean',
         start: [
             'd.o.g.',
             'c.a.t.',
@@ -153,7 +153,7 @@ const CHALLENGES = [
     },
     {
         name: 'Swap Two Lines',
-        hint: 'ddp cuts the current line and pastes it after the next (a swap)',
+        hint: 'dd cuts the line and p pastes it below the next one — together, ddp swaps two lines',
         start: [
             'let b = 2;',
             'let a = 1;',
@@ -184,7 +184,7 @@ const CHALLENGES = [
     },
     {
         name: 'Set Every Value',
-        hint: 'ci( to change inside the parens, then j. to repeat on the next line',
+        hint: 'ci( changes just the text inside the parentheses — type a value, then j and . to repeat below',
         start: [
             'setValue(0)',
             'setValue(0)',
@@ -212,7 +212,7 @@ const CHALLENGES = [
     },
     {
         name: 'Empty the Containers',
-        hint: 'cursor on the bracket, then di[ / di{ / di( to delete inside',
+        hint: 'put the cursor on a bracket, then di[ / di{ / di( wipes everything inside it',
         start: [
             'let coords = [1, 2, 3];',
             'let point = {x: 0, y: 0};',
@@ -226,7 +226,7 @@ const CHALLENGES = [
     },
     {
         name: 'Trim the Tail',
-        hint: 'f| finds the delimiter, d$ deletes to end of line',
+        hint: 'f| jumps to the | delimiter and d$ deletes from there to the end of the line',
         start: [
             'apple|12345',
             'banana|6789',
@@ -240,7 +240,7 @@ const CHALLENGES = [
     },
     {
         name: 'Fix the Bugs',
-        hint: 'fix the off-by-one, missing slice, and template literal',
+        hint: 'three bugs to fix — an off-by-one, a missing slice, and a string that wants backticks',
         start: [
             'function fibonacci(n) {',
             '  if (n <= 0) return n;',
@@ -286,7 +286,7 @@ const CHALLENGES = [
     },
     {
         name: 'Rename & Refactor',
-        hint: 'ciw to rename fibonacci → fib and result → output',
+        hint: 'ciw changes the whole word under the cursor — use it to rename fibonacci→fib and result→output',
         start: [
             'function fibonacci(n) {',
             '  if (n <= 1) return n;',
@@ -758,7 +758,10 @@ const MOTION_INFO = {
 // compute the affected text range. Returns { linewise, startRow, endRow, startCol, endCol }.
 // For charwise: [startRow.startCol .. endRow.endCol] inclusive.
 // For linewise: whole rows from startRow to endRow.
-function computeRange(motion, start, end) {
+// `op` is the pending operator ('d' | 'c' | 'y' | undefined). It only matters
+// for the change + forward-word-motion case, where Vim drops the motion's
+// trailing whitespace (cw ≡ ce). See VIM_DIFFERENCES.md §2.11.
+function computeRange(motion, start, end, op) {
     // `%` is an inclusive motion spanning the two matching brackets on one line.
     // The jump may be forward or backward, so the span is order-independent. A
     // no-match repeat leaves start === end, which yields no range (nothing to do).
@@ -780,6 +783,33 @@ function computeRange(motion, start, end) {
 
     // Character-wise
     if (info.dir === 'forward') {
+        // Vim: with the CHANGE operator, a forward word motion behaves like the
+        // word-end motion (`cw` ≡ `ce`): it NEVER crosses a line break, drops the
+        // motion's trailing whitespace when starting on a word (so `c2w` on
+        // "one two three" changes "one two"), but keeps a whitespace run when the
+        // cursor starts on whitespace (so `cw` on a space deletes the blank run).
+        // See VIM_DIFFERENCES.md §2.11.
+        if (op === 'c' && (motion === 'w' || motion === 'W')) {
+            let cEnd = prevPos(end);                 // exclusive end -> inclusive
+            const noAdvance = !cEnd || cEnd.row < start.row ||
+                              (cEnd.row === start.row && cEnd.col < start.col);
+            if (noAdvance) {
+                // `w` reached no following word (line's only/last word): `cw` still
+                // changes to the end of the current word / blank run on this line.
+                const col = endOfWordInLine(start.row, start.col, motion === 'W');
+                return { linewise: false, startRow: start.row, startCol: start.col,
+                         endRow: start.row, endCol: col };
+            }
+            if (cEnd.row > start.row) {              // word reached a later line:
+                const sLine = state.buffer[start.row] || '';
+                cEnd = { row: start.row, col: Math.max(start.col, sLine.length - 1) };
+            }
+            const sCh = (state.buffer[start.row] || '')[start.col];
+            const blankStart = (sCh === undefined || sCh === ' ' || sCh === '\t');
+            if (!blankStart) cEnd = trimTrailingBlanks(start, cEnd);
+            return { linewise: false, startRow: start.row, startCol: start.col,
+                     endRow: cEnd.row, endCol: cEnd.col };
+        }
         // Forward: from start to (end - 1) if exclusive, end if inclusive
         let endAdj;
         if (info.inclusive) {
@@ -838,6 +868,50 @@ function nextPos(pos) {
     return null;
 }
 
+// Walk an inclusive end position back over a run of spaces/tabs, stopping at the
+// first non-blank or at `start` (never before it). Used so `c` + a word motion
+// excludes trailing whitespace, like Vim (cw ≡ ce). Returns { row, col }.
+function trimTrailingBlanks(start, end) {
+    let row = end.row, col = end.col;
+    for (;;) {
+        const line = state.buffer[row] || '';
+        const ch = (col >= 0 && col < line.length) ? line[col] : null;
+        if (ch !== ' ' && ch !== '\t') break; // non-blank (or OOB) → stop
+        let prow, pcol;
+        if (col > 0) { prow = row; pcol = col - 1; }
+        else if (row > start.row) { prow = row - 1; pcol = (state.buffer[prow] || '').length - 1; }
+        else break;
+        if (prow < start.row || (prow === start.row && pcol < start.col)) break;
+        row = prow; col = pcol;
+    }
+    return { row, col };
+}
+
+// Inclusive column of the end of the word (bigWord=WORD when true) that starts at
+// (row, col) — or of the whitespace run when the cursor is on whitespace. Stays on
+// the line. Used as the `c`+w fallback when there is no following word (so `cw`
+// on a line's only/last word still changes to end-of-word). VIM_DIFFERENCES §2.11.
+function endOfWordInLine(row, col, bigWord) {
+    const line = state.buffer[row] || '';
+    if (col >= line.length) return col; // at/after EOL
+    const isBlank = ch => ch === ' ' || ch === '\t';
+    if (isBlank(line[col])) {
+        let i = col;
+        while (i + 1 < line.length && isBlank(line[i + 1])) i++;
+        return i; // last blank of the run
+    }
+    if (bigWord) {
+        let i = col;
+        while (i + 1 < line.length && !isBlank(line[i + 1])) i++;
+        return i; // last non-space of the WORD
+    }
+    const wordish = ch => isWordChar(ch);
+    const cls = wordish(line[col]) ? 1 : 0; // word run vs punctuation run
+    let i = col;
+    while (i + 1 < line.length && (wordish(line[i + 1]) ? 1 : 0) === cls) i++;
+    return i; // last char of this word run
+}
+
 // --- Position comparison (a before or equal to b) ---
 function posBeforeOrEqual(a, b) {
     if (a.row < b.row) return true;
@@ -853,6 +927,9 @@ function posBeforeOrEqual(a, b) {
 function computeTextObjectRange(prefix, objChar) {
     if (prefix === 'i' && objChar === 'w') return innerWordRange();
     if (prefix === 'a' && objChar === 'w') return aWordRange();
+    if (prefix === 'i' && objChar === 'W') return innerWORDRange();
+    if (prefix === 'a' && objChar === 'W') return aWORDRange();
+    if (objChar === '"' || objChar === "'" || objChar === '`') return quoteRange(prefix, objChar);
     const pair = bracketChars(objChar);
     if (pair) return bracketRange(prefix, pair.open, pair.close);
     return null;
@@ -903,6 +980,37 @@ function aWordRange() {
     return { ...inner, startCol };
 }
 
+// WORD text objects (iW / aW): delimited by whitespace only — punctuation is part of
+// the WORD (unlike iw/aw which break on punctuation). Mirrors innerWordRange/aWordRange
+// but uses "non-whitespace" as the unit. See VIM_DIFFERENCES.md §3.
+function innerWORDRange() {
+    const { row, col } = state.cursor;
+    const line = state.buffer[row] || '';
+    const onSpace = charClass(line[col]) === 'space';
+    let startCol = col, endCol = col;
+    if (onSpace) {
+        while (startCol > 0 && charClass(line[startCol - 1]) === 'space') startCol--;
+        while (endCol < line.length - 1 && charClass(line[endCol + 1]) === 'space') endCol++;
+    } else {
+        while (startCol > 0 && charClass(line[startCol - 1]) !== 'space') startCol--;
+        while (endCol < line.length - 1 && charClass(line[endCol + 1]) !== 'space') endCol++;
+    }
+    return { linewise: false, startRow: row, startCol, endRow: row, endCol };
+}
+
+function aWORDRange() {
+    // "a WORD" = inner WORD + surrounding whitespace (trailing preferred, else leading)
+    const inner = innerWORDRange();
+    if (!inner) return null;
+    const line = state.buffer[inner.startRow] || '';
+    let endCol = inner.endCol;
+    while (endCol < line.length - 1 && charClass(line[endCol + 1]) === 'space') endCol++;
+    if (endCol > inner.endCol) return { ...inner, endCol };
+    let startCol = inner.startCol;
+    while (startCol > 0 && charClass(line[startCol - 1]) === 'space') startCol--;
+    return { ...inner, startCol };
+}
+
 
 // Map a text-object char to its bracket pair. Vim accepts several spellings for
 // the same object: ( ) b are parens, { } B are braces, [ ] are square brackets.
@@ -910,6 +1018,7 @@ function bracketChars(objChar) {
     if (objChar === '(' || objChar === ')' || objChar === 'b') return { open: '(', close: ')' };
     if (objChar === '{' || objChar === '}' || objChar === 'B') return { open: '{', close: '}' };
     if (objChar === '[' || objChar === ']') return { open: '[', close: ']' };
+    if (objChar === '<' || objChar === '>') return { open: '<', close: '>' };
     return null;
 }
 
@@ -998,6 +1107,40 @@ function bracketRange(prefix, openCh, closeCh) {
     let aStart = open;
     while (aStart > 0 && charClass(line[aStart - 1]) === 'space') aStart--;
     return { linewise: false, startRow: row, startCol: aStart, endRow: row, endCol: close };
+}
+
+// Charwise range for an inner (i) / a (a) quoted-string block on the cursor's line.
+// Delimiters are symmetric (same char opens and closes): " ' and `. Quotes are paired
+// consecutively along the line; the enclosing pair (o <= col <= c) wins, else — like
+// bracketRange — the next pair at/after the cursor, then the earliest pair on the line.
+// Returns null when no complete pair exists (operator aborts, as Vim's E20 does).
+// Single-line only (no cross-line quote search), consistent with the rest of the object set.
+function quoteRange(prefix, q) {
+    const { row, col } = state.cursor;
+    const line = state.buffer[row] || '';
+    const idxs = [];
+    for (let i = 0; i < line.length; i++) if (line[i] === q) idxs.push(i);
+    const pairs = [];
+    for (let k = 0; k + 1 < idxs.length; k += 2) pairs.push([idxs[k], idxs[k + 1]]);
+    let pair = null;
+    for (const [o, c] of pairs) { if (col >= o && col <= c) { pair = [o, c]; break; } }
+    if (!pair) {
+        for (const [o, c] of pairs) { if (o > col) { pair = [o, c]; break; } }   // forward
+    }
+    if (!pair && pairs.length) pair = pairs[0];                                   // wrap to first
+    if (!pair) return null;
+    const [o, c] = pair;
+    if (prefix === 'i') {
+        // Inner text between the quotes (adjacent `""` yields an empty, no-op range).
+        return { linewise: false, startRow: row, startCol: o + 1, endRow: row, endCol: c - 1 };
+    }
+    // 'a': the quotes plus adjacent whitespace — prefer trailing, else leading.
+    let aEnd = c;
+    while (aEnd < line.length - 1 && charClass(line[aEnd + 1]) === 'space') aEnd++;
+    if (aEnd > c) return { linewise: false, startRow: row, startCol: o, endRow: row, endCol: aEnd };
+    let aStart = o;
+    while (aStart > 0 && charClass(line[aStart - 1]) === 'space') aStart--;
+    return { linewise: false, startRow: row, startCol: aStart, endRow: row, endCol: c };
 }
 
 // --- Match Bracket (`%`) ---
@@ -1100,6 +1243,11 @@ function doFind(motion, count, ch) {
         return;
     }
     if (state.mode === 'operator-pending') {
+        if (state.pendingOperator === '>' || state.pendingOperator === '<' || state.pendingOperator === '=') {
+            state.cursor = dest; clampCursor();
+            applyIndent(state.pendingOperator, oldPos.row, oldPos.row); // find is single-line
+            setMode('normal'); clampCursor(); render(); return;
+        }
         const range = findOpRange(motion, oldPos, dest);
         state.cursor = dest;
         clampCursor();
@@ -1165,8 +1313,13 @@ function executeMovement(movement, destOverride) {
         const oldPos = { ...state.cursor };
         state.cursor = newPos;
         clampCursor();
+        // Indent operators shift the whole lines a motion spans (always linewise).
+        if (state.pendingOperator === '>' || state.pendingOperator === '<' || state.pendingOperator === '=') {
+            applyIndent(state.pendingOperator, Math.min(oldPos.row, newPos.row), Math.max(oldPos.row, newPos.row));
+            setMode('normal'); clampCursor(); render(); return;
+        }
         // Compute range and apply operator
-        const range = computeRange(movement, oldPos, newPos);
+        const range = computeRange(movement, oldPos, newPos, state.pendingOperator);
         if (state.pendingOperator === 'd') {
             if (range) {
                 applyDelete(range);
@@ -1321,7 +1474,7 @@ function doRepeatOnce(rec) {
                 state.cursor = dest;
                 clampCursor();
             }
-            const range = computeRange(rec.motion, oldPos, state.cursor);
+            const range = computeRange(rec.motion, oldPos, state.cursor, rec.op);
             if (!range) { state.cursor = oldPos; return; }
             if (rec.op === 'd') {
                 applyDelete(range); // pushes undo + fills register
@@ -1388,6 +1541,18 @@ function doRepeatOnce(rec) {
             const range = { startRow: c.row, startCol: c.col, endRow: c.row, endCol };
             applyChange(range);
             insertRecordedText(t);
+            break;
+        }
+        case 'op-eol': {
+            // Replay `D`/`C`: delete/change to end of (count-1 further) lines.
+            applyToEol(rec.op, rec.count); // pushes undo; `c` enters insert
+            if (rec.op === 'c') insertRecordedText(t);
+            break;
+        }
+        case 'indent': {
+            // Replay `>>`/`<<`/`==`: shift [count] lines from the cursor again.
+            const r1 = c.row;
+            applyIndent(rec.op, r1, r1 + (rec.count || 1) - 1);
             break;
         }
         case 'paste': {
@@ -1645,6 +1810,112 @@ function changeChars(range) {
     state.statusMsg = 'change...';
 }
 
+// --- `D` / `C`: delete/change from the cursor to end of line ====================
+// Vim's D == d$ and C == c$. With a count N the motion reaches the end of the
+// Nth line (the current line plus N-1 following lines). Because the target is
+// always end-of-line there is no trailing text to keep on the last line, so:
+//   * the text before the cursor on the first line (the "head") is preserved;
+//   * the lines the span covers collapse to that single head line.
+// For `d` an empty head means the covered lines vanish entirely (like `dd`);
+// for `c` we always leave one line (the head) to type into. A shared undo unit;
+// registered in lastChange so `.` replays it. These match real Vim (D==d$, etc.);
+// see the operators baseline in VIM_DIFFERENCES.md §1.
+function applyToEol(op, count) {
+    const c = state.cursor;
+    const startRow = c.row, startCol = c.col;
+    const targetRow = Math.min(startRow + (count || 1) - 1, ROWS - 1);
+    pushUndo();
+    // Register: the affected text, charwise (lines joined by newlines).
+    const parts = [];
+    for (let r = startRow; r <= targetRow; r++) {
+        const line = state.buffer[r] || '';
+        parts.push(line.slice(r === startRow ? startCol : 0));
+    }
+    setRegister(parts.join('\n'), false);
+    const head = (state.buffer[startRow] || '').slice(0, startCol);
+    const numLines = targetRow - startRow + 1;
+    if (op === 'd') {
+        if (numLines === 1) {
+            state.buffer[startRow] = head;
+        } else if (head === '') {
+            state.buffer.splice(startRow, numLines);       // whole lines removed
+        } else {
+            state.buffer.splice(startRow, numLines, head);  // keep the head line
+        }
+        while (state.buffer.length < ROWS) state.buffer.push('');
+        state.cursor = { row: Math.min(startRow, ROWS - 1),
+                         col: Math.min(startCol, (state.buffer[Math.min(startRow, ROWS - 1)] || '').length) };
+        state.statusMsg = 'deleted';
+        state.lastChange = { kind: 'op-eol', op: 'd', count: count || 1 };
+    } else { // change
+        if (numLines === 1) {
+            state.buffer[startRow] = head;
+            state.cursor = { row: startRow, col: startCol };
+        } else {
+            state.buffer.splice(startRow, numLines, head);  // always keep one line
+            while (state.buffer.length < ROWS) state.buffer.push('');
+            state.cursor = { row: startRow, col: head.length };
+        }
+        setMode('insert');
+        state.statusMsg = 'change...';
+        state.lastChange = { kind: 'op-eol', op: 'c', count: count || 1, typed: '' };
+    }
+    clampCursor();
+}
+
+// --- `Y` / `S`: linewise yank / change [count] lines (Vim: Y == yy, S == cc) ====
+function applyLinewise(op, count) {
+    const startRow = state.cursor.row;
+    const endRow = Math.min(ROWS - 1, startRow + (count || 1) - 1);
+    const range = { linewise: true, startRow, endRow };
+    if (op === 'y') {
+        applyYank(range);                 // cursor stays put
+        return;
+    }
+    applyChange(range);                   // enters insert
+    state.lastChange = { kind: 'op-linewise', op: 'c', count: count || 1, typed: '' };
+}
+
+// --- Indent operators: `>` (right), `<` (left), `=` (auto) ======================
+// Policy (matches the oracle's pinned shiftwidth=2/expandtab): shift by 2 spaces,
+// always spaces, operating on whole lines. `=` re-indents with a brace-depth model
+// (`{`/`(`/`[` open, `}`/`)`/`]` close; a line whose first non-blank is a closer
+// level out). See VIM_DIFFERENCES.md §1 operators and §2.12 (policy + divergences).
+const SW = 2;
+function indentWidth(line) { let i = 0; while (i < line.length && line[i] === ' ') i++; return i; }
+function autoIndentRange(r1, r2) {
+    // Depth from all lines above r1 (those lines are not re-indented here).
+    const opener = ch => ch === '{' || ch === '(' || ch === '[';
+    const closer = ch => ch === '}' || ch === ')' || ch === ']';
+    let depth = 0;
+    const delta = s => { let d = 0; for (const ch of s) { if (opener(ch)) d++; else if (closer(ch)) d--; } return d; };
+    for (let r = 0; r < r1; r++) depth += delta(state.buffer[r] || '');
+    for (let r = r1; r <= r2; r++) {
+        const content = (state.buffer[r] || '').trim();
+        if (content === '') { state.buffer[r] = ''; continue; } // leave blank lines empty
+        const startsCloser = closer(content[0]);
+        const lvl = startsCloser ? Math.max(0, depth - 1) : depth;
+        state.buffer[r] = ' '.repeat(lvl * SW) + content;
+        depth += delta(content);
+        if (depth < 0) depth = 0;
+    }
+}
+function applyIndent(op, r1, r2) {
+    r1 = Math.max(0, Math.min(r1, ROWS - 1));
+    r2 = Math.max(r1, Math.min(r2, ROWS - 1));
+    pushUndo();
+    for (let r = r1; r <= r2; r++) {
+        const line = state.buffer[r] || '';
+        if (op === '>') { if (line.trim() !== '') state.buffer[r] = ' '.repeat(SW) + line; }
+        else if (op === '<') { const cut = Math.min(indentWidth(line), SW); state.buffer[r] = line.slice(cut); }
+    }
+    if (op === '=') autoIndentRange(r1, r2);
+    state.cursor = { row: r1, col: state.buffer[r1] ? indentWidth(state.buffer[r1]) : 0 };
+    if (op === '>') state.cursor.col = Math.min(state.cursor.col + SW, (state.buffer[r1] || '').length);
+    state.statusMsg = op === '=' ? 'indented' : ((r2 - r1 + 1) + ' line' + (r2 > r1 ? 's' : '') + (op === '>' ? ' indented' : ' unindented'));
+    state.lastChange = { kind: 'indent', op, count: r2 - r1 + 1 };
+}
+
 
 // --- Insert Mode ---
 function handleInsertKey(e) {
@@ -1895,6 +2166,26 @@ function handleNormalKey(e) {
     }
 
     // Operator-pending entry (or double-tap like dd/cc/yy)
+    // Indent operators > (right), < (left), = (auto). Doubled (>>/<=/==) shifts the
+    // current [count] lines; otherwise they wait for a motion and shift the lines it
+    // spans. Always linewise. See VIM_DIFFERENCES.md §1.
+    if (key === '>' || key === '<' || key === '=') {
+        if (state.mode === 'operator-pending' && state.pendingOperator === key) {
+            const opCount = state.inputBuffer ? parseInt(state.inputBuffer) : 1;
+            state.inputBuffer = '';
+            const r1 = state.cursor.row;
+            applyIndent(key, r1, r1 + opCount - 1);
+            setMode('normal'); clampCursor(); render(); return;
+        }
+        if (state.mode === 'operator-pending') setMode('normal'); // e.g. > then < : restart
+        if (state.inputBuffer && !/^[0-9]+$/.test(state.inputBuffer)) state.inputBuffer = '';
+        state.mode = 'operator-pending';
+        state.pendingOperator = key;
+        state.statusMsg = key + ' ...';
+        updateModeDisplay();
+        return;
+    }
+
     if (key === 'd' || key === 'c' || key === 'y') {
         // Double-tap: dd deletes line, cc changes line, yy yanks line. Honors count prefix.
         if (state.mode === 'operator-pending' && state.pendingOperator === key) {
@@ -1977,6 +2268,23 @@ function handleNormalKey(e) {
         applyChange(range); // pushes undo, deletes the chars, enters insert at startCol
         state.insertTouched = true; // delete+typed text share one undo unit (like o/O)
         state.lastChange = { kind: 'op-chars', op: 'c', count, typed: '' };
+        render(); return;
+    }
+
+    // Uppercase operator shortcuts: D == d$, C == c$, Y == yy, S == cc.
+    // (All honor a leading count: 2D/2C reach end-of-2nd-line; 2Y/2S = two lines.)
+    if (key === 'D' || key === 'C' || key === 'Y' || key === 'S') {
+        if (state.mode === 'operator-pending') setMode('normal'); // cancel a pending op
+        if (state.mode !== 'normal') return;
+        let count = state.inputBuffer ? parseInt(state.inputBuffer) : 1;
+        state.inputBuffer = '';
+        state.pendingG = false;
+        if (!count || count < 1) count = 1;
+        if (key === 'D') applyToEol('d', count);
+        else if (key === 'C') applyToEol('c', count);
+        else if (key === 'Y') applyLinewise('y', count);
+        else applyLinewise('c', count); // S == cc
+        clampCursor();
         render(); return;
     }
 
@@ -2130,6 +2438,11 @@ function handleNormalKey(e) {
             return;
         }
         if (state.mode === 'operator-pending') {
+            if (state.pendingOperator === '>' || state.pendingOperator === '<' || state.pendingOperator === '=') {
+                state.cursor = dest; clampCursor();
+                applyIndent(state.pendingOperator, Math.min(oldPos.row, dest.row), Math.max(oldPos.row, dest.row));
+                setMode('normal'); clampCursor(); render(); return;
+            }
             const range = computeRange('%', oldPos, dest);
             state.cursor = dest;
             clampCursor();
@@ -2177,7 +2490,12 @@ function handleNormalKey(e) {
                 state.cursor = dest;
                 clampCursor();
             }
-            const range = computeRange(key, oldPos, state.cursor);
+            // Indent operators shift the lines spanned (always linewise).
+            if (state.pendingOperator === '>' || state.pendingOperator === '<' || state.pendingOperator === '=') {
+                applyIndent(state.pendingOperator, Math.min(oldPos.row, state.cursor.row), Math.max(oldPos.row, state.cursor.row));
+                setMode('normal'); clampCursor(); render(); return;
+            }
+            const range = computeRange(key, oldPos, state.cursor, state.pendingOperator);
             if (state.pendingOperator === 'd') {
                 if (range) {
                     applyDelete(range);
@@ -2248,11 +2566,26 @@ function handleCommandKey(e) {
 }
 
 // Advance to the next challenge (wrapping around) and re-focus the editor.
+// Briefly shows a "✓ Solved!" banner, then reveals the new challenge's hint
+// (the same hint you'd get choosing it from the dropdown). The swap back to the
+// hint only happens if the player hasn't already started acting (which would
+// have replaced statusMsg with a command echo / operator-pending prompt).
+let solvedTimer = null;
 function advanceChallenge() {
     const next = (state.currentChallenge + 1) % CHALLENGES.length;
-    loadChallenge(next);
-    state.statusMsg = '✓ Solved! Now: ' + CHALLENGES[next].name;
+    loadChallenge(next); // sets statusMsg to the new hint, re-renders, refocuses
+    const hint = CHALLENGES[next].hint;
+    state.statusMsg = '✓ Solved! ' + CHALLENGES[next].name;
     render();
+    if (solvedTimer) clearTimeout(solvedTimer);
+    solvedTimer = setTimeout(() => {
+        solvedTimer = null;
+        // Only reveal the hint if nothing else has taken over the status line.
+        if (state.statusMsg.indexOf('✓ Solved!') === 0) {
+            state.statusMsg = hint;
+            render();
+        }
+    }, 1500);
 }
 
 // Interpret a typed `:` command (without the leading colon).
@@ -2284,6 +2617,16 @@ function runCommand(cmd) {
     }
     if (base === 'q') { state.statusMsg = 'use :wq to finish a challenge'; render(); return; }
     if (base === 'w') { state.statusMsg = 'buffer is virtual — nothing to write'; render(); return; }
+    // :bn / :bp — go to the next / previous exercise (wraps; like the picker,
+    // no completion required). loadChallenge resets state, shows the hint, refocuses.
+    if (base === 'bn' || base === 'bp') {
+        const n = CHALLENGES.length;
+        const next = base === 'bn'
+            ? (state.currentChallenge + 1) % n
+            : (state.currentChallenge - 1 + n) % n;
+        loadChallenge(next);
+        return;
+    }
     state.statusMsg = 'not an editor: :' + cmd;
     render();
 }
@@ -2313,6 +2656,13 @@ function handleTextObjectKey(e) {
     }
 
     // Apply operator over the range
+    if (op === '>' || op === '<' || op === '=') {
+        applyIndent(op, Math.min(range.startRow, range.endRow), Math.max(range.startRow, range.endRow));
+        setMode('normal');
+        clampCursor();
+        render();
+        return;
+    }
     if (op === 'd') {
         applyDelete(range);
         state.lastChange = { kind: 'op-text-object', op: 'd', prefix, obj: key };

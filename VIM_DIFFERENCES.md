@@ -19,15 +19,22 @@ Run the suite with `npm test`.
   There is **no visual mode.**
 - **Motions:** `h` `j` `k` `l`, `w` `b` `e`, `W` `B` `E`, `ge` `gE`, `0` `$`, `gg` `G`
   (`G` jumps to the last *non-empty* line, like Vim's end-of-file), `%` (match
-  bracket, single-line — see §2.8), and `f` `F` `t` `T` (find-in-line, single-line,
-  honoring a count for the Nth occurrence) with `;` / `,` repeat (same / opposite
+  bracket, single-line — see §2.8), and `f` `F` `t` `T` (find-in-line — line-bound,
+  like Vim — honoring a count for the Nth occurrence) with `;` / `,` repeat (same / opposite
   direction) — see §2.9.
 - **Operators:** `d` (delete), `c` (change), `y` (yank), `x` (delete char), `p` / `P`
-  (paste). Doubled forms `dd` / `cc` / `yy` work as line operations. Single-char edits
+  (paste). Doubled forms `dd` / `cc` / `yy` work as line operations. The uppercase
+  shortcuts `D` (`= d$`), `C` (`= c$`), `Y` (`= yy`) and `S` (`= cc`) are supported and
+  honor a count (`2D` spans two lines' end; `2Y` / `2S` are two lines). Single-char edits
   `r{char}` (replace) and `s` (substitute → change + insert) are supported (see §2.10). In
   normal mode the `Del` key acts as `x` (deletes the char under the cursor).
-- **Text objects:** `iw` / `aw` (word) and bracket blocks — `i(`/`a(`, `i{`/`a{`,
-  `i[`/`a[` (with the `)`, `}`, `]`, `b`, `B` aliases) — usable with `d` / `c` / `y`.
+- **Indent operators:** `>` (right), `<` (left), `=` (auto), doubled (`>>`/`<<`/`==`) or
+  with a motion/text object, all honoring a count. Policy is `shiftwidth=2`, always
+  **spaces**; `=` uses a brace-depth model — see §2.12 for the divergences.
+- **Text objects:** `iw` / `aw` (word), `iW` / `aW` (WORD — whitespace-delimited), quoted
+  strings `i"`/`a"`, `i'`/`a'`, `` i` ``/`` a` ``, and bracket blocks — `i(`/`a(`,
+  `i{`/`a{`, `i[`/`a[`, `i<`/`a<` (with the `)`, `}`, `]`, `>` `b`, `B` aliases) — usable
+  with `d` / `c` / `y`.
 - **Insert entry:** `i` `a` `I` `A`, and `o` / `O` (open line).
 - **Insert editing:** printable chars, `Enter` (split line), `Backspace` (delete left /
   join at col 0), `Del` (delete right / join at EOL), `Esc`.
@@ -36,7 +43,9 @@ Run the suite with `npm test`.
   (`5G` / `5gg`) and repeated `2ge` / `2gE` (e.g. `2dw`, `3.`, `2dd`, `2p`).
 - **Command-line:** `:` opens a minimal command line. This is a **game action**, not
   the Vim editor command: `:wq` / `:x` advance to the next challenge (only when the
-  current one is solved; `:wq!` skips). `:q` / `:w` print friendly hints and anything
+  current one is solved; `:wq!` skips). `:bn` / `:bp` go to the next / previous exercise
+  (wrapping, no completion required — a nod to Vim's `:bnext`/`:bprevious` buffer
+  commands, here mapped to exercises). `:q` / `:w` print friendly hints and anything
   else reports `not an editor: :<cmd>`.
 
 Everything else below is a **gap or a difference.**
@@ -146,7 +155,7 @@ Behavioral notes:
 would need buffer-spanning balance tracking (and is ambiguous with unmatched lines).
 *Asserted in:* `tests/matchbracket.test.js`.
 
-### 2.9 `f` / `F` / `t` / `T` (find-in-line) are strictly single-line
+### 2.9 `f` / `F` / `t` / `T` (find-in-line) — faithful (line-bound, like Vim)
 `f{char}` / `F{char}` move onto the next / previous `{char}` on the **current line**;
 `t{char}` / `T{char}` land one character short of it (forward: just before; backward:
 just after). A numeric count picks the Nth occurrence (`3fx` → third `x` forward). As
@@ -154,9 +163,9 @@ operator motions they are inclusive in the usual Vim sense: `df"` deletes **thro
 the found quote, `dt"` deletes **up to but not including** it (same for `dF"` / `dT"`
 backward). A missing occurrence is a no-op that reports `pattern not found`.
 
-Differences from real Vim:
-- **Single-line only** — the search never wraps to the next line (Vim's `f`/`t` are also
-  line-bound, so this matches; but unlike Vim there is no `cpoptions` line-scope toggle).
+These commands are **faithful to real Vim**: `f`/`F`/`t`/`T` are line-bound there too
+— Vim never moves them across a line break (it uses `/` search to go cross-line) — so
+the single-line scoping here is *not* a divergence. The remaining differences are minor:
 - `;` repeats the last find in the **same** direction and `,` in the **opposite** direction
   (f↔F, t↔T), both honoring a count (e.g. `2;`). The stored last-find is set only by an
   explicit `f`/`F`/`t`/`T` — pressing `;`/`,` does not change the stored direction, so
@@ -200,6 +209,58 @@ Divergences from real Vim:
 
 ---
 
+### 2.11 `c{word-motion}` behaves like the word-end motion  *(fixed — was found by the oracle)*
+
+Real Vim treats a **change** with a forward word motion like a change to the end of the
+word — `cw` ≡ `ce`, and `c{N}w` reaches the end of the Nth word — rather than the
+`w` motion's landing. Three consequences, all now matching Vim:
+
+- **Trailing whitespace is dropped** on a word start: `c2w` on `one two three` + `X`
+  yields `X three` (the space before `three` is kept), not `Xthree`.
+- **The change never crosses a line break.** `w` from a line's last word advances to the
+  next line, but the change is clamped to the start line: on lines `aaa` / `bbb`, `cw` +
+  `X` gives `X` then `bbb` (it does **not** join into `Xbbb`). If the motion finds no
+  following word at all (`cw` on a line's only/last word), the change runs to end-of-word.
+- **A blank start keeps the whitespace run**: `cw` with the cursor on spaces deletes the
+  whole blank run up to the next word (e.g. `one··two` → `oneXtwo`).
+
+`d`/`y` with a word motion are **unchanged** and still include the trailing space and may
+join lines at EOL (matching Vim). The fix is an operator-aware branch in `computeRange`
+(`op === 'c'` with `w`/`W`) that derives the word-end itself, so it is independent of the
+`w` landing.
+
+*Asserted in:* `tests/range.test.js` (the "§2.11" describe block pins the trim, the
+line-break clamp, the no-following-word fallback, and the blank-run case — without `nvim`)
+and `tests/vim_equivalence.test.js` (the `cw`/`c2w`/`c2W`/`cw`-line-final/`cw`-blank cases
+now sit in the **match** table, verified against real Neovim).
+
+---
+
+### 2.12 Indent operators (`>` / `<` / `=`) policy and divergences  *(verified by the oracle)*
+
+The indent operators are implemented, with a deliberately simple, well-tested policy:
+
+- **Shift width is 2, and indentation is always spaces** (never tabs). This matches the
+  oracle only because `tests/vim_oracle.lua` pins `shiftwidth=2 expandtab`; plain `vim`
+  would use `shiftwidth=8` and insert tabs. (`>` adds two spaces to a non-blank line;
+  `<` removes up to two leading spaces.)
+- **`=` is a brace-depth auto-indent**, not Vim's full C/`indentexpr` engine: it counts
+  `{ ( [` openers and `} ) ]` closers (a line whose first non-blank is a closer sits one
+  level out) and re-indents the affected range. It matches real Vim on brace-structured
+  code, but Vim's richer algorithm also understands keywords (`case`, `if`, comments,
+  continued lines) that the simulator ignores — so `=` can diverge on those.
+- **Fixed-grid count edge:** `N>>` / `N<<` where the count would run past the last line is
+  **refused by Vim** (no change) but **applied to the available lines** here, because the
+  buffer is a fixed 20-row grid with blank padding rather than a real EOF.
+- Blank lines are left untouched by `>` / `<` (no trailing-space indentation is added).
+
+*Asserted in:* `tests/indent.test.js` (shift, counts, motions, text objects, `=` brace
+nesting, dot-repeat, undo — without `nvim`) and `tests/vim_equivalence.test.js` (the
+`>>`/`2>>`/`>j`/`>G`/`<<`/`2<<`/`>iw`/`=G` cases match real Neovim; the "count-indent past
+the last line" case pins the fixed-grid divergence above).
+
+---
+
 
 ## 3. Not implemented (feature / command gaps)
 
@@ -208,20 +269,15 @@ workarounds:
 
 | Vim | Status | Workaround in this emulator |
 |-----|--------|------------------------------|
-| `D` (delete to EOL) | no-op | `d$` |
-| `C` (change to EOL) | no-op | `c$` |
-| `Y` (yank line) | no-op | `yy` |
-| `S` (substitute line) | no-op | `cc` |
 | Visual / Select (`v`, `V`, `Ctrl-V`) | absent | (none) |
 | Search (`/`, `?`, `n`, `N`) | absent | (none) |
 | Marks (`m`, backtick, `'`) | absent | (none) |
-| Indent operators (`>`, `<`, `=`) | absent | (none) |
-| Other text objects (`i"` `ip` `it` …) | only `iw`/`aw` + bracket blocks | (none) |
+| Other text objects (`ip` `it` `is` …) | only `iw`/`aw`, `iW`/`aW`, quotes (`" ' \``) + bracket blocks (`() {} [] <>`) | (none) |
 | Named / special registers (`"a`, `"_`, `"+`) | only unnamed | (single register) |
 | Macros (`q`) | absent | (none) |
 
-Only `d`, `c`, `y` act as operators (plus `x`, `p`, `P`, and the single-char `r` / `s`).
-Uppercase `D` / `C` / `Y` and `S` are **not** wired as operator shortcuts.
+Only `d`, `c`, `y` act as operators (plus their `D`/`C`/`Y`/`S` shortcuts, `x`, `p`, `P`,
+and the single-char `r` / `s`).
 
 ---
 
@@ -250,3 +306,55 @@ These stem from the fixed browser-grid model rather than Vim semantics:
 When you fix or intentionally accept a divergence, update this file **and** add/adjust a
 test that pins the behavior, citing it here. Search the tests for `KNOWN LIMITATION`
 comments, which mark the ones encoded directly in the suite.
+
+When you **add a challenge**, give it a canonical solution in `tests/canonical_solutions.js`
+using only Vim-equivalent commands (so §6 proves it), and confirm the §7 exercise-safety test
+still passes (taught path reaches target; absent idioms stay safe no-ops).
+
+---
+
+## 6. Real-Vim oracle (`tests/vim_equivalence.test.js`)
+
+The canonical keystroke sequences live in `tests/canonical_solutions.js` (shared with
+`tests/challenge.test.js`). For each one, the equivalence test feeds the **same** starting
+buffer and **same** keystrokes to both the simulator and a real Vim driver — Neovim run
+headless via `tests/vim_oracle.lua`, which applies the keys with `:normal!` (synchronous,
+so no typeahead races) and reports the resulting buffer. The two buffers must match after
+normalization (trailing whitespace / trailing blank lines dropped).
+
+- **Hard requirement:** the test **throws at load if `nvim` is not on PATH** rather than
+  skipping — a missing oracle fails the suite loudly instead of silently passing. (If you
+  don't want to install Neovim, delete the test file.)
+- **Scope:** covers the Vim-equivalent subset (motions, operators, text objects, dot-repeat,
+  `r`/`s`). It deliberately does **not** assert equality on the fixed-grid constraints
+  (20×80, no-scroll); those are exercised instead as *expected-to-differ* cases (see the
+  "80-column cap" block), keeping this document honest about intentional divergence.
+- **Option neutrality:** the driver sets `formatoptions=` and disables `autoindent` /
+  `smartindent` / `cindent`, because Vim's defaults otherwise auto-continue comment leaders
+  on `o`/`cc` (which the simulator never does) and would cause spurious mismatches.
+
+---
+
+## 7. Exercise-safety audit (`tests/exercise_vim_safety.test.js`)
+
+The game must never **steer a player toward a divergence** — i.e. an exercise whose
+"obvious Vim answer" the simulator handles differently or wrong. Two invariants are pinned:
+
+1. **Taught paths are clean.** Each challenge's canonical solution reproduces its target.
+   Those same sequences are proven Vim-equivalent by §6, so a taught solution can never
+   hinge on a divergence (it would fail to reach the target here if it did).
+2. **Absent Vim idioms are safe no-ops.** The idiomatic-but-unimplemented moves a real-Vim
+   user reaches for by instinct — visual mode (`v`/`V`/`Ctrl-V`), word-search (`*`/`#`),
+   search (`/` + `n`/`N`), substitute (`:%s`), macros (`q`) — leave every challenge buffer
+   byte-for-byte unchanged. They may print a status or set a pending operator, but must never
+   silently edit. So a player who tries one gets "no effect," not a wrong edit.
+
+**Findings (current exercises):** no exercise routes the intended answer through a
+divergence. The most tempting absent idioms are substitution (for repeated edits, e.g.
+"add a semicolon to every line" → `:%s/$/;/`) and visual-line delete (e.g. "delete these
+comment lines" → `V`+`d`); both are deliberately steered away by hints that teach the
+supported drill (`A` + `j.` dot-repeat; `dd`/`2dd`) and both fail safe (no-op / "not an
+editor"). `ci"`/`ci(`-style and `D`/`C`-style obvious answers are all implemented and
+Vim-equivalent, so they work. When adding a challenge, add it to this file's data and
+SOLUTIONS, then extend §2 of this test if it introduces a new tempting idiom.
+

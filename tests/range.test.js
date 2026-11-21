@@ -37,6 +37,54 @@ describe('computeRange — forward exclusive (w W l)', () => {
     });
 });
 
+// Change + a forward word motion drops the motion's trailing whitespace, like
+// Vim (cw ≡ ce). See VIM_DIFFERENCES.md §2.11. Only for op === 'c' on w/W;
+// delete/yank and other motions are unaffected.
+describe('computeRange — change trims trailing blanks (§2.11)', () => {
+    beforeEach(() => setup(['foo bar']));
+
+    test("c + w excludes the trailing space: [0..2]", () => {
+        assert.deepEqual(computeRange('w', P(0, 0), P(0, 4), 'c'), cw(0, 0, 0, 2));
+    });
+    test('c + W excludes the trailing space: [0..2]', () => {
+        assert.deepEqual(computeRange('W', P(0, 0), P(0, 4), 'c'), cw(0, 0, 0, 2));
+    });
+    test('d + w still includes the trailing space: [0..3]', () => {
+        assert.deepEqual(computeRange('w', P(0, 0), P(0, 4), 'd'), cw(0, 0, 0, 3));
+    });
+    test('y + w still includes the trailing space: [0..3]', () => {
+        assert.deepEqual(computeRange('w', P(0, 0), P(0, 4), 'y'), cw(0, 0, 0, 3));
+    });
+    test('c + l is unaffected (not a word motion): [0..0]', () => {
+        assert.deepEqual(computeRange('l', P(0, 0), P(0, 1), 'c'), cw(0, 0, 0, 0));
+    });
+    test('c + e is unaffected (inclusive word end): [0..2]', () => {
+        assert.deepEqual(computeRange('e', P(0, 0), P(0, 2), 'c'), cw(0, 0, 0, 2));
+    });
+    test('multi-word run: c + 2w trims the final run of blanks only', () => {
+        setup(['one two three']);
+        // end after 2w is col 8 (start of "three"); exclusive end col 7 is the
+        // space, trimmed back to col 6 (end of "two").
+        assert.deepEqual(computeRange('w', P(0, 0), P(0, 8), 'c'), cw(0, 0, 0, 6));
+    });
+    // cross-line clamp, word-end fallback, and blank-run (§2.11).
+    test('c + w that reached a later line clamps to end of the start line', () => {
+        setup(['aaa', 'bbb']);
+        // `w` from col0 lands at (1,0); change clamps to the last char of line 0.
+        assert.deepEqual(computeRange('w', P(0, 0), P(1, 0), 'c'), cw(0, 0, 0, 2));
+    });
+    test('c + w with no following word changes to end of the current word', () => {
+        setup(['foo bar']);
+        // motion did not advance (end === start) → fall back to end-of-word.
+        assert.deepEqual(computeRange('w', P(0, 0), P(0, 0), 'c'), cw(0, 0, 0, 2));
+    });
+    test('c + w on a blank start keeps the whole blank run (no trim)', () => {
+        setup(['one  two']);
+        // cursor on the space run (col 3..4); end is next word start (col 5).
+        assert.deepEqual(computeRange('w', P(0, 3), P(0, 5), 'c'), cw(0, 3, 0, 4));
+    });
+});
+
 describe('computeRange — forward inclusive (e E $)', () => {
     test('de deletes the word only: [0..2]', () => {
         setup(['foo bar']);

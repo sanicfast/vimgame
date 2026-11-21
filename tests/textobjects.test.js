@@ -168,3 +168,105 @@ describe('text objects — cancellation & integration', () => {
 
     });
 });
+describe('WORD text objects (iW / aW) — whitespace-delimited', () => {
+    test('diW selects the whole non-space run (punctuation included)', () => {
+        const r = act(['foo.bar baz'], 0, 0, ['d', 'i', 'W']);
+        assert.equal(r.line, ' baz');
+        assert.equal(r.register.text, 'foo.bar');
+    });
+    test('daW extends to the trailing space too', () => {
+        const r = act(['foo.bar baz'], 0, 0, ['d', 'a', 'W']);
+        assert.equal(r.line, 'baz');
+        assert.equal(r.register.text, 'foo.bar ');
+    });
+    test('iW keeps punctuation that iw would stop at', () => {
+        // contrast: diw on "foo,bar" deletes only "foo"; diW deletes "foo,bar".
+        const w = act(['foo,bar'], 0, 1, ['d', 'i', 'w']);
+        const W = act(['foo,bar'], 0, 1, ['d', 'i', 'W']);
+        assert.equal(w.line, ',bar');
+        assert.equal(W.line, '');
+    });
+    test('ciW replaces the whole WORD then enters insert', () => {
+        const r = act(['a=b+c'], 0, 2, ['c', 'i', 'W', 'X', 'Escape']);
+        assert.equal(r.line, 'X');
+        assert.equal(r.mode, 'normal');
+    });
+    test('daW on a lone word deletes it (no trailing space)', () => {
+        const r = act(['alone'], 0, 0, ['d', 'a', 'W']);
+        assert.equal(r.line, '');
+        assert.equal(r.register.text, 'alone');
+    });
+    test('iW on whitespace selects the run of spaces', () => {
+        const r = act(['a   b'], 0, 2, ['d', 'i', 'W']);
+        assert.equal(r.line, 'ab');
+        assert.equal(r.register.text, '   ');
+    });
+    test('yiW + p round-trips a WORD (register preserved)', () => {
+        setup(['foo.bar baz'], 0, 0);
+        run(['y', 'i', 'W']);           // yank "foo.bar"
+        run(['$', 'p']);                // go to EOL, paste after -> append
+        assert.equal(state.buffer[0], 'foo.bar bazfoo.bar');
+    });
+});
+
+describe('quoted-string text objects (i" / a", also i\' and i`)', () => {
+    test('di" deletes the inner text, keeps the quotes', () => {
+        const r = act(['s="hello"'], 0, 4, ['d', 'i', '"']);   // cursor inside
+        assert.equal(r.line, 's=""');
+        assert.equal(r.register.text, 'hello');
+    });
+    test('da" deletes the quotes and the content', () => {
+        const r = act(['s="hello"'], 0, 4, ['d', 'a', '"']);
+        assert.equal(r.line, 's=');
+        assert.equal(r.register.text, '"hello"');
+    });
+    test('ci" replaces inner text and enters insert', () => {
+        const r = act(['s="hi"'], 0, 3, ['c', 'i', '"', 'X', 'Escape']);
+        assert.equal(r.line, 's="X"');
+        assert.equal(r.mode, 'normal');
+    });
+    test('from before the string, selects the next pair (forward search)', () => {
+        const r = act(['x = "hi"'], 0, 0, ['c', 'i', '"', 'Z', 'Escape']);
+        assert.equal(r.line, 'x = "Z"');
+    });
+    test('works with single quotes', () => {
+        const r = act(["p='ab'"], 0, 3, ["c", "i", "'", 'Y', 'Escape']);
+        assert.equal(r.line, "p='Y'");
+    });
+    test('two strings on a line: acts on the enclosing one', () => {
+        const r = act(['k="a" j="b"'], 0, 3, ['d', 'i', '"']);   // cursor in first
+        assert.equal(r.line, 'k="" j="b"');
+    });
+    test('empty string "" yields a no-op inner delete', () => {
+        const r = act(['s=""'], 0, 2, ['d', 'i', '"']);
+        assert.equal(r.line, 's=""');
+    });
+    test('no quotes on the line -> unknown text object (no change)', () => {
+        const r = act(['plain text'], 0, 0, ['d', 'i', '"']);
+        assert.equal(r.line, 'plain text');
+        assert.match(r.status, /unknown text object/);
+    });
+});
+
+describe('angle-bracket text objects (i< / a<)', () => {
+    test('di< deletes inner text, keeps the brackets', () => {
+        const r = act(['a<b>c'], 0, 2, ['d', 'i', '<']);   // cursor on '<'
+        assert.equal(r.line, 'a<>c');
+        assert.equal(r.register.text, 'b');
+    });
+    test('da< deletes the brackets and the content', () => {
+        const r = act(['a<b>c'], 0, 2, ['d', 'a', '<']);
+        assert.equal(r.line, 'ac');
+        assert.equal(r.register.text, '<b>');
+    });
+    test('ci< replaces inner text and enters insert', () => {
+        const r = act(['x=<hi>'], 0, 3, ['c', 'i', '<', 'Z', 'Escape']);
+        assert.equal(r.line, 'x=<Z>');
+        assert.equal(r.mode, 'normal');
+    });
+    test('no angle pair on the line -> unknown text object', () => {
+        const r = act(['a > b'], 0, 2, ['d', 'i', '<']);   // '>' with no '<' opener
+        assert.equal(r.line, 'a > b');
+        assert.match(r.status, /unknown text object/);
+    });
+});

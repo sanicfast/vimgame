@@ -9,9 +9,15 @@ function makeEl() {
 global.document = { getElementById() { return makeEl(); }, createElement() { return makeEl(); },
     addEventListener() {}, body: makeEl() };
 
-const { test, describe } = require('node:test');
+const { test, describe, after, mock } = require('node:test');
 const assert = require('node:assert/strict');
 const { state, initChallenge, setMode, handleKeyDown, CHALLENGES } = require('../script.js');
+
+// Neutralize the 1.5s "✓ Solved!" flash timer for the whole file so :wq tests
+// don't leave pending real timers (which would delay exit / fire mid-suite).
+// Tests that need to observe the reveal call mock.timers.tick(1500).
+mock.timers.enable({ apis: ['setTimeout'] });
+after(() => mock.timers.reset());
 
 // Drive the global key dispatcher exactly like the browser would.
 function press(k) {
@@ -83,9 +89,69 @@ describe(':wq advances to the next challenge', () => {
         run([':', 'w', 'q', '!', 'Enter']);
         assert.equal(state.currentChallenge, i + 1);
     });
+    test(':wq shows a Solved banner, then reveals the hint after 1.5s', () => {
+        const i = idx('Swap Two Lines');
+        load(i);
+        run(['d', 'd', 'p']);           // completes the swap challenge
+        run([':', 'w', 'q', 'Enter']);
+        // Immediately: a solved banner naming the challenge we just cleared.
+        assert.match(state.statusMsg, /✓ Solved!/);
+        assert.doesNotMatch(state.statusMsg, /not solved/);
+        // After the flash window: the new challenge's hint takes over,
+        // matching what the dropdown shows when you pick it directly.
+        mock.timers.tick(1500);
+        assert.equal(state.statusMsg, CHALLENGES[i + 1].hint);
+    });
+    test(':wq hint reveal does not clobber a status the player already typed', () => {
+        const i = idx('Swap Two Lines');
+        load(i);
+        run(['d', 'd', 'p']);
+        run([':', 'w', 'q', 'Enter']);   // -> banner "✓ Solved! ..."
+        // Player starts another action before the timer fires (sets a prompt).
+        run(['d']);                       // operator-pending: statusMsg "d ..."
+        mock.timers.tick(1500);
+        // The reveal must NOT overwrite their newer status message.
+        assert.doesNotMatch(state.statusMsg, /^✓ Solved!/);
+        assert.notEqual(state.statusMsg, CHALLENGES[i + 1].hint);
+    });
     test('wraps around after the last challenge', () => {
         load(CHALLENGES.length - 1);          // last challenge (index length-1)
         run([':', 'w', 'q', '!', 'Enter']);
         assert.equal(state.currentChallenge, 0);
+    });
+});
+
+describe(':bn / :bp navigate exercises', () => {
+    test(':bn goes to the next challenge', () => {
+        load(0);
+        run([':', 'b', 'n', 'Enter']);
+        assert.equal(state.currentChallenge, 1);
+    });
+    test(':bp goes to the previous challenge', () => {
+        load(2);
+        run([':', 'b', 'p', 'Enter']);
+        assert.equal(state.currentChallenge, 1);
+    });
+    test(':bn wraps from the last to the first', () => {
+        load(CHALLENGES.length - 1);
+        run([':', 'b', 'n', 'Enter']);
+        assert.equal(state.currentChallenge, 0);
+    });
+    test(':bp wraps from the first to the last', () => {
+        load(0);
+        run([':', 'b', 'p', 'Enter']);
+        assert.equal(state.currentChallenge, CHALLENGES.length - 1);
+    });
+    test(':bn needs no completion (works unsolved)', () => {
+        const i = CHALLENGES.findIndex(c => c.name === 'Set Every Value'); // left unsolved on purpose
+        load(i);
+        run([':', 'b', 'n', 'Enter']);
+        assert.equal(state.currentChallenge, (i + 1) % CHALLENGES.length);
+    });
+    test(':bn leaves the new challenge loaded (hint shown, buffer reset)', () => {
+        load(0);
+        run([':', 'b', 'n', 'Enter']);
+        assert.equal(state.statusMsg, CHALLENGES[1].hint);
+        assert.deepEqual(state.buffer[0], (CHALLENGES[1].start[0] || '').slice(0, 80));
     });
 });
