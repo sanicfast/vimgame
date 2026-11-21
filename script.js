@@ -30,10 +30,12 @@ const CHALLENGES = [
         start: [
             'print("bye',
             'log("hi',
+            'console.log("hi again and once more',
         ],
         target: [
             'print("bye")',
             'log("hi")',
+            'console.log("hi again and once more")',
         ],
     },
     {
@@ -184,7 +186,7 @@ const CHALLENGES = [
     },
     {
         name: 'Set Every Value',
-        hint: 'ci( changes just the text inside the parentheses — type a value, then j and . to repeat below',
+        hint: 'ci( changes the text inside parentheses — works even from outside them (jumps you inside). Type a value, then j and . to repeat below',
         start: [
             'setValue(0)',
             'setValue(0)',
@@ -278,7 +280,7 @@ const CHALLENGES = [
     },
     {
         name: 'Drop the Parenthetical',
-        hint: 'D deletes from the cursor to end of line — f( then h onto the space, then D drops the rest',
+        hint: 'e goes to end of a word, l one more step, then D deletes the rest — j and . repeat',
         start: [
             'Total (incl tax)',
             'Size (in pixels)',
@@ -286,6 +288,18 @@ const CHALLENGES = [
         target: [
             'Total',
             'Size',
+        ],
+    },
+    {
+        name: 'Drop the Parenthetical 2',
+        hint: 't( jumps up to the opening paren (not onto it) — then D deletes the rest, j and t( and . repeat',
+        start: [
+            'Total price (incl tax)',
+            'Size of object (in pixels)',
+        ],
+        target: [
+            'Total price',
+            'Size of object',
         ],
     },
     {
@@ -430,6 +444,180 @@ const CHALLENGES = [
             '}',
             '',
             'console.log(quickSort([3, 6, 8, 10, 1, 2, 1]));',
+        ],
+    },
+    {
+        name: 'Wrap Lines in Parens',
+        hint: 'A and ) on every line with j and . — then gg back to the top, I and ( on every line with . again',
+        start: [
+            'alpha',
+            'beta',
+            'gamma',
+        ],
+        target: [
+            '(alpha)',
+            '(beta)',
+            '(gamma)',
+        ],
+    },
+    {
+        name: 'Edit Both Ends',
+        hint: 'A appends at the end of a line, I inserts at the start — add the missing { and return keyword',
+        start: [
+            'if (x > 0) ',
+            'True',
+            '}',
+            'if (y < 0) ',
+            'False',
+            '}',
+        ],
+        target: [
+            'if (x > 0) {',
+            '  return True',
+            '}',
+            'if (y < 0) {',
+            '  return False',
+            '}',
+        ],
+    },
+    {
+        name: 'Unwrap Lines',
+        hint: 'x deletes the char under the cursor, $ jumps to end of line — delete both wrapping parens',
+        start: [
+            '(alpha)',
+            '(beta)',
+        ],
+        target: [
+            'alpha',
+            'beta',
+        ],
+    },
+    {
+        name: 'Save the First Line',
+        hint: 'dd cuts a line, G goes to the last line, p pastes below — then gg back to the top and 2dd to remove two lines',
+        start: [
+            'important note',
+            'junk data',
+            'old config',
+            'keep this',
+            'keep this too',
+        ],
+        target: [
+            'keep this',
+            'keep this too',
+            'important note',
+        ],
+    },
+    {
+        name: 'Delete Every Other Word',
+        hint: 'dw deletes a word, w skips past one — alternate w dw to delete every other word',
+        start: [
+            'one two three four five',
+        ],
+        target: [
+            'one three five',
+        ],
+    },
+    {
+        name: 'Delete After the Dot',
+        hint: 'f. finds a dot, dt. deletes the junk up to (not into) the next dot',
+        start: [
+            'config.ignore_this.keepme',
+            'app.skip_that.keepme',
+            'sys.trash_now.keepme',
+        ],
+        target: [
+            'config.keepme',
+            'app.keepme',
+            'sys.keepme',
+        ],
+    },
+    {
+        name: 'Move Last Line to Top',
+        hint: 'G goes to the last line, dd cuts it, gg goes to the top, and P pastes it above the first line',
+        start: [
+            'alpha',
+            'beta',
+            'gamma',
+            'delta',
+            'epsilon',
+        ],
+        target: [
+            'epsilon',
+            'alpha',
+            'beta',
+            'gamma',
+            'delta',
+        ],
+    },
+    {
+        name: 'Jump and Duplicate',
+        hint: 'yiw yanks the word under the cursor, f( finds the paren, % jumps to the matching ) — p pastes it',
+        start: [
+            'wrap(inner text)',
+        ],
+        target: [
+            'wrap(inner text)wrap',
+        ],
+    },
+    {
+        name: 'Count the Jumps',
+        hint: 'use the relative line numbers to count — A to append, . to repeat, then Nj to jump down',
+        start: [
+            'server 1 = start',
+            'server 2 = idle',
+            'server 3 = idle',
+            'server 4 = idle',
+            'server 5 = idle',
+            'server 6 = idle',
+            'server 7 = idle',
+            'server 8 = idle',
+            'server 9 = idle',
+            'server 10 = idle',
+            'server 11 = idle',
+            'server 12 = idle',
+            'server 13 = idle',
+            'server 14 = idle',
+            'server 15 = idle',
+            'server 16 = idle',
+            'server 17 = idle',
+            'server 18 = idle',
+            'server 19 = stop',
+        ],
+        target: [
+            'server 1 = start!',
+            'server 2 = idle',
+            'server 3 = idle',
+            'server 4 = idle',
+            'server 5 = idle',
+            'server 6 = idle',
+            'server 7 = idle',
+            'server 8 = idle',
+            'server 9 = idle!',
+            'server 10 = idle',
+            'server 11 = idle!',
+            'server 12 = idle',
+            'server 13 = idle',
+            'server 14 = idle',
+            'server 15 = idle',
+            'server 16 = idle',
+            'server 17 = idle',
+            'server 18 = idle',
+            'server 19 = stop!',
+        ],
+    },
+    {
+        name: 'Fix the Indent',
+        hint: '>> indents a line, << unindents — fix the broken indentation on each line',
+        start: [
+            'if active:',
+            'print("on")',
+            '  print("debug")',
+        ],
+        target: [
+            'if active:',
+            '  print("on")',
+            'print("debug")',
         ],
     },
 ];
@@ -913,6 +1101,18 @@ function computeRange(motion, start, end, op) {
                      endRow: cEnd.row, endCol: cEnd.col };
         }
         // Forward: from start to (end - 1) if exclusive, end if inclusive
+        // No-advance case: motion returned same position (e.g. `w` on last word).
+        // For `dw`/`yw`, Vim deletes through end-of-line instead of doing nothing.
+        const noAdvance = end.row === start.row && end.col === start.col;
+        if (noAdvance && !info.inclusive) {
+            if ((motion === 'w' || motion === 'W') &&
+                (op === 'd' || op === 'y' || op === undefined)) {
+                const eol = Math.max(start.col, endOfLine(start.row));
+                return { linewise: false, startRow: start.row, startCol: start.col,
+                         endRow: start.row, endCol: eol };
+            }
+            return null;
+        }
         let endAdj;
         if (info.inclusive) {
             endAdj = end;
@@ -927,15 +1127,6 @@ function computeRange(motion, start, end, op) {
             endAdj = prevPos(end);
         }
         if (!endAdj) return null; // would go before start
-        // A no-op forward motion (e.g. `w` already at end of buffer) leaves
-        // end === start; for an exclusive motion endAdj = prevPos(end) then
-        // falls strictly before start, which would be a reversed span. No text
-        // is affected, so report no range (mirrors vim affecting nothing).
-        if (!info.inclusive &&
-            (endAdj.row < start.row ||
-             (endAdj.row === start.row && endAdj.col < start.col))) {
-            return null;
-        }
         return { linewise: false, startRow: start.row, startCol: start.col,
                  endRow: endAdj.row, endCol: endAdj.col };
     } else {
@@ -1070,7 +1261,26 @@ function aWordRange() {
     const inner = innerWordRange();
     if (!inner) return null;
     const line = state.buffer[inner.startRow] || '';
-    // Try to extend to whitespace after, then before
+    // When cursor is on whitespace: grab the adjacent word (prefer next word to the
+    // right; fall back to preceding word if only trailing whitespace remains).
+    if (charClass(line[inner.startCol]) === 'space') {
+        // Try to extend right to include the next word
+        let endCol = inner.endCol;
+        if (endCol + 1 < line.length && charClass(line[endCol + 1]) !== 'space') {
+            while (endCol < line.length - 1 && charClass(line[endCol + 1]) !== 'space') endCol++;
+            return { ...inner, endCol };
+        }
+        // No word to the right — extend left to include the preceding word
+        let startCol = inner.startCol;
+        if (startCol > 0 && charClass(line[startCol - 1]) !== 'space') {
+            const cls = charClass(line[startCol - 1]);
+            while (startCol > 0 && charClass(line[startCol - 1]) === cls) startCol--;
+            return { ...inner, startCol };
+        }
+        // No adjacent word at all — return just the whitespace
+        return inner;
+    }
+    // Cursor is on a word/punct: try to extend to whitespace after, then before
     let endCol = inner.endCol;
     while (endCol < line.length - 1 && charClass(line[endCol + 1]) === 'space') endCol++;
     if (endCol > inner.endCol) {
@@ -1387,7 +1597,7 @@ function motionDest(movement) {
     switch (movement) {
         case 'h': return { row: state.cursor.row, col: state.cursor.col - 1 };
         case 'l': return { row: state.cursor.row, col: state.cursor.col + 1 };
-        case 'j': return { row: state.cursor.row + 1, col: state.cursor.col };
+        case 'j': return state.cursor.row >= lastNonEmptyRow() ? null : { row: state.cursor.row + 1, col: state.cursor.col };
         case 'k': return { row: state.cursor.row - 1, col: state.cursor.col };
         case 'w': return moveToNextWord(state.cursor);
         case 'b': return moveToPrevWord(state.cursor);
@@ -2013,7 +2223,6 @@ function applyIndent(op, r1, r2) {
     }
     if (op === '=') autoIndentRange(r1, r2);
     state.cursor = { row: r1, col: state.buffer[r1] ? indentWidth(state.buffer[r1]) : 0 };
-    if (op === '>') state.cursor.col = Math.min(state.cursor.col + SW, (state.buffer[r1] || '').length);
     state.statusMsg = op === '=' ? 'indented' : ((r2 - r1 + 1) + ' line' + (r2 > r1 ? 's' : '') + (op === '>' ? ' indented' : ' unindented'));
     state.lastChange = { kind: 'indent', op, count: r2 - r1 + 1 };
 }
@@ -2096,6 +2305,19 @@ function handleInsertKey(e) {
             state.buffer.push('');
         }
         render();
+        return;
+    }
+
+    if (key === 'Tab') {
+        // Insert-mode Tab inserts SW spaces (expandtab policy).
+        const c = state.cursor;
+        const line = state.buffer[c.row] || '';
+        if (line.length + SW <= COLS) {
+            state.buffer[c.row] = line.slice(0, c.col) + ' '.repeat(SW) + line.slice(c.col);
+            c.col += SW;
+            if (state.lastChange && 'typed' in state.lastChange) state.lastChange.typed += ' '.repeat(SW);
+            render();
+        }
         return;
     }
 
@@ -2445,8 +2667,9 @@ function handleNormalKey(e) {
         return;
     }
 
-    // Numeric prefix (counts start 1-9; 0 is the "beginning of line" motion)
-    if (/[1-9]/.test(key)) {
+    // Numeric prefix (counts start 1-9; 0 is the "beginning of line" motion,
+    // but after a digit it is part of the count, e.g. "10" = count ten).
+    if (/[1-9]/.test(key) || (key === '0' && state.inputBuffer)) {
         state.inputBuffer += key;
         state.statusMsg = state.inputBuffer;
         return;
@@ -2459,7 +2682,7 @@ function handleNormalKey(e) {
             const count = state.inputBuffer ? parseInt(state.inputBuffer, 10) : 0;
             state.inputBuffer = '';
             if (count > 0) {
-                const row = Math.min(count - 1, ROWS - 1);
+                const row = Math.min(count - 1, lastNonEmptyRow());
                 executeMovement('gg', { row, col: firstNonBlank(row) });
             } else {
                 executeMovement('gg');
@@ -2490,7 +2713,7 @@ function handleNormalKey(e) {
         state.pendingG = false;
         state.inputBuffer = '';
         if (count > 0) {
-            const row = Math.min(count - 1, ROWS - 1);
+            const row = Math.min(count - 1, lastNonEmptyRow());
             executeMovement('G', { row, col: firstNonBlank(row) });
         } else {
             executeMovement('G');
@@ -2791,6 +3014,20 @@ function render() {
         const rowEl = document.createElement('div');
         rowEl.className = 'terminal-row';
         const line = state.buffer[r] || '';
+
+        // Relative line number gutter (only within content area)
+        const numEl = document.createElement('div');
+        numEl.className = 'line-num';
+        const last = lastNonEmptyRow();
+        if (r > last) {
+            // Below content — blank gutter
+        } else if (r === state.cursor.row) {
+            numEl.classList.add('current');
+            numEl.textContent = r + 1;
+        } else {
+            numEl.textContent = Math.abs(r - state.cursor.row);
+        }
+        rowEl.appendChild(numEl);
 
         for (let c = 0; c < COLS; c++) {
             const cell = document.createElement('div');

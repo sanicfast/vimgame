@@ -105,6 +105,24 @@ body {
     height: 18px;
 }
 
+.line-num {
+    width: 28px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    color: #484f58;
+    font-size: 12px;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.line-num.current {
+    color: #c9d1d9;
+    font-weight: bold;
+}
+
 .terminal-cell {
     width: 9.2px;
     height: 18px;

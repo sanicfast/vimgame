@@ -287,6 +287,11 @@ These stem from the fixed browser-grid model rather than Vim semantics:
 
 - **Fixed 20 × 80 grid** (`ROWS = 20`, `COLS = 80`). The buffer is always exactly 20
   lines, padded with blanks.
+  - **Cursor clamps to last content line.** `j`, `G`, `dG` etc. respect
+    `lastNonEmptyRow()` — the cursor and line motions never land on (or span past) the
+    invisible blank padding below the content. The relative line-number gutter also
+    hides numbers past this boundary. Real Vim has no such padding — its buffer simply
+    ends at the last line.
   - **No scrolling / no auto-grow.** `o` and insert-mode `Enter` at the **bottom row are
     refused (no-op)** — there is nowhere to put a new row, so the last line is left
     unchanged and the buffer stays exactly 20 rows. (`O` at the bottom still clears the

@@ -19,6 +19,14 @@ describe('> indent right', () => {
     test('>> shifts the current line by two spaces', () => {
         setup(['abc']); run(['>','>']); assert.equal(state.buffer[0], '  abc');
     });
+    test('>> places cursor on first non-blank (not double-shifted)', () => {
+        setup(['abc']); run(['>','>']); assert.equal(state.cursor.col, 2);
+        setup(['  abc']); run(['>','>']); assert.equal(state.cursor.col, 4);
+    });
+    test('<< places cursor on first non-blank', () => {
+        setup(['  abc']); run(['<','<']); assert.equal(state.cursor.col, 0);
+        setup(['    abc']); run(['<','<']); assert.equal(state.cursor.col, 2);
+    });
     test('2>> shifts two lines', () => {
         setup(['a','b','c']); run(['2','>','>']); assert.deepEqual(rows(3), ['  a','  b','c']);
     });

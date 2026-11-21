@@ -40,9 +40,9 @@ describe('G / gg honor a count', () => {
         setup(SEVEN, 2, 0); run(['G']);
         assert.deepEqual(state.cursor, { row: 6, col: 0 });
     });
-    test('a count beyond the buffer clamps to the last row', () => {
+    test('a count beyond the buffer clamps to the last content row', () => {
         setup(SEVEN, 0, 0); run(['9', '9', 'G']);
-        assert.equal(state.cursor.row, ROWS - 1);
+        assert.equal(state.cursor.row, SEVEN.length - 1);
     });
     test('5gg jumps to line 5 (same as 5G)', () => {
         setup(SEVEN, 6, 0); run(['5', 'g', 'g']);
@@ -76,4 +76,24 @@ describe('ge/gE count & pending-g cancel', () => {
         setup(SEVEN, 0, 0); run(['g', 'v', 'G']);
         assert.deepEqual(state.cursor, { row: 6, col: 0 }); // last non-empty, not line 6
     });
+
+describe('zero in counts (10, 100, etc.)', () => {
+    test('10l moves right 10 columns', () => {
+        setup(['abcdefghijklmnopqrstuvwxyz'], 0, 0); run(['1', '0', 'l']);
+        assert.equal(state.cursor.col, 10);
+    });
+    test('0 alone still moves to column 0', () => {
+        setup(['  hello'], 0, 4); run(['0']);
+        assert.equal(state.cursor.col, 0);
+    });
+    test('d0 still deletes to start of line (not used as count)', () => {
+        setup(['  hello'], 0, 4); run(['d', '0']);
+        assert.equal(state.buffer[0], 'llo');
+    });
+    test('100j clamps to last content row', () => {
+        setup(['a', 'b', 'c'], 0, 0); run(['1', '0', '0', 'j']);
+        assert.equal(state.cursor.row, 2);
+    });
+});
+
 });

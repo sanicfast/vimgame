@@ -172,4 +172,19 @@ describe('computeRange — degenerate (no-op motion)', () => {
         setup(['foo']);
         assert.equal(range('b', P(0, 0), P(0, 0)), null);
     });
+    test('dw on last word (w no-advances) deletes through EOL', () => {
+        setup(['hello world']);
+        const r = computeRange('w', P(0, 6), P(0, 6), 'd');
+        assert.deepEqual(r, cw(0, 6, 0, 10));
+    });
+    test('dw on lone word at col 0 deletes whole line', () => {
+        setup(['word']);
+        const r = computeRange('w', P(0, 0), P(0, 0), 'd');
+        assert.deepEqual(r, cw(0, 0, 0, 3));
+    });
+    test('yw on last word yanks through EOL', () => {
+        setup(['foo bar']);
+        const r = computeRange('w', P(0, 4), P(0, 4), 'y');
+        assert.deepEqual(r, cw(0, 4, 0, 6));
+    });
 });

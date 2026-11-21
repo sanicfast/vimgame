@@ -101,6 +101,23 @@ describe('daw — delete a word (with adjacent whitespace)', () => {
         const r = act(['foo'], 0, 0, ['d', 'a', 'w']);
         assert.equal(r.line, '');
         assert.equal(r.register.text, 'foo');
+    });
+    test('from whitespace before a word: deletes space + word', () => {
+        const r = act(['  foo'], 0, 0, ['d', 'a', 'w']);
+        assert.equal(r.line, '');
+        assert.equal(r.register.text, '  foo');
+    });
+    test('from whitespace between words: deletes space + next word', () => {
+        const r = act(['foo bar'], 0, 3, ['d', 'a', 'w']);
+        assert.equal(r.line, 'foo');
+        assert.equal(r.register.text, ' bar');
+    });
+    test('from trailing whitespace (no word to right): deletes prev word + space', () => {
+        const r = act(['foo   '], 0, 3, ['d', 'a', 'w']);
+        assert.equal(r.line, '');
+        assert.equal(r.register.text, 'foo   ');
+    });
+});
 
 describe('text objects — change & yank', () => {
     test('yiw yanks the word, mutates nothing, leaves cursor in place', () => {
@@ -166,8 +183,6 @@ describe('text objects — cancellation & integration', () => {
     });
 });
 
-    });
-});
 describe('WORD text objects (iW / aW) — whitespace-delimited', () => {
     test('diW selects the whole non-space run (punctuation included)', () => {
         const r = act(['foo.bar baz'], 0, 0, ['d', 'i', 'W']);
