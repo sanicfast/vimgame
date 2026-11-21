@@ -239,6 +239,108 @@ const CHALLENGES = [
         ],
     },
     {
+        name: 'Open Above',
+        hint: 'O opens a line ABOVE the cursor (o opens below) — type a header, Esc, then do the next line',
+        start: [
+            'sum = 0',
+            'total = 0',
+        ],
+        target: [
+            '// init',
+            'sum = 0',
+            '// init',
+            'total = 0',
+        ],
+    },
+    {
+        name: 'Change a Word',
+        hint: 'cw erases from the cursor to the end of the word — type the new word, then 0 and . on the next line',
+        start: [
+            'enable cache',
+            'enable logging',
+        ],
+        target: [
+            'disable cache',
+            'disable logging',
+        ],
+    },
+    {
+        name: 'Substitute a Letter',
+        hint: 's deletes the char under the cursor and starts typing — s then - overwrites +, then . repeats below',
+        start: [
+            '+12',
+            '+34',
+        ],
+        target: [
+            '-12',
+            '-34',
+        ],
+    },
+    {
+        name: 'Drop the Parenthetical',
+        hint: 'D deletes from the cursor to end of line — f( then h onto the space, then D drops the rest',
+        start: [
+            'Total (incl tax)',
+            'Size (in pixels)',
+        ],
+        target: [
+            'Total',
+            'Size',
+        ],
+    },
+    {
+        name: 'Inside the Quotes',
+        hint: 'ci" changes just the text inside the quotes — type it, Esc, then repeat on the next line',
+        start: [
+            'msg = ""',
+            'tag = ""',
+        ],
+        target: [
+            'msg = "hi"',
+            'tag = "ok"',
+        ],
+    },
+    {
+        name: 'Drop the Argument',
+        hint: '% jumps to the matching bracket — stand on ( and type d% to delete the whole group',
+        start: [
+            'sum(filter(data))',
+            'max(items)',
+        ],
+        target: [
+            'sum',
+            'max',
+        ],
+    },
+    {
+        name: 'Indent This',
+        hint: '>> indents the current line — j down then . to indent each line of the body',
+        start: [
+            'if ready:',
+            'go()',
+            'wait()',
+            'stop()',
+        ],
+        target: [
+            'if ready:',
+            '  go()',
+            '  wait()',
+            '  stop()',
+        ],
+    },
+    {
+        name: 'Around the Word',
+        hint: 'daw deletes a whole word plus the space around it — then j and . to do the next line',
+        start: [
+            'the quick fox',
+            'the lazy dog',
+        ],
+        target: [
+            'quick fox',
+            'lazy dog',
+        ],
+    },
+    {
         name: 'Fix the Bugs',
         hint: 'three bugs to fix — an off-by-one, a missing slice, and a string that wants backticks',
         start: [

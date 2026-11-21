@@ -24,5 +24,13 @@ module.exports = {
         'Fill the Quotes': ['f', '"', 'l', 'i', 'a', 'l', 'i', 'c', 'e', 'Escape', 'j', '0', 'f', '"', 'l', 'i', 'b', 'o', 'b', 'Escape'],
         'Empty the Containers': ['0', 'f', '[', 'd', 'i', '[', 'j', '0', 'f', '{', 'd', 'i', '{', 'j', '0', 'f', '(', 'd', 'i', '('],
         'Trim the Tail': ['f', '|', 'd', '$', 'j', '0', 'f', '|', 'd', '$', 'j', '0', 'f', '|', 'd', '$'],
+        'Open Above': ['O', '/', '/', ' ', 'i', 'n', 'i', 't', 'Escape', 'j', 'j', 'O', '/', '/', ' ', 'i', 'n', 'i', 't', 'Escape'],
+        'Change a Word': ['c', 'w', 'd', 'i', 's', 'a', 'b', 'l', 'e', 'Escape', 'j', '0', '.'],
+        'Substitute a Letter': ['s', '-', 'Escape', 'j', '.'],
+        'Drop the Parenthetical': ['f', '(', 'h', 'D', 'j', 'f', '(', 'h', 'D'],
+        'Inside the Quotes': ['f', '"', 'c', 'i', '"', 'h', 'i', 'Escape', 'j', '0', 'f', '"', 'c', 'i', '"', 'o', 'k', 'Escape'],
+        'Drop the Argument': ['f', '(', 'd', '%', 'j', 'f', '(', 'd', '%'],
+        'Indent This': ['j', '>', '>', 'j', '.', 'j', '.'],
+        'Around the Word': ['d', 'a', 'w', 'j', '.'],
     },
 };
