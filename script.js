@@ -280,7 +280,7 @@ const CHALLENGES = [
     },
     {
         name: 'Drop the Parenthetical',
-        hint: 'e goes to end of a word, l one more step, then D deletes the rest — j and . repeat',
+        hint: 'D keeps the space before the ( — so e to word end, l onto that space, then D erases it all; j and . repeat',
         start: [
             'Total (incl tax)',
             'Size (in pixels)',
@@ -300,6 +300,18 @@ const CHALLENGES = [
         target: [
             'Total price',
             'Size of object',
+        ],
+    },
+    {
+        name: 'Trim the Email',
+        hint: 'f@ jumps to the @, then D deletes to end of line — leaving just the name (clean break, no leftover space)',
+        start: [
+            'amy@example.com',
+            'bob@site.org',
+        ],
+        target: [
+            'amy',
+            'bob',
         ],
     },
     {
@@ -462,7 +474,7 @@ const CHALLENGES = [
     },
     {
         name: 'Edit Both Ends',
-        hint: 'A appends at the end of a line, I inserts at the start — add the missing { and return keyword',
+        hint: 'A adds the { at a line end; on the next line I then two spaces + "return " indent it — do both blocks',
         start: [
             'if (x > 0) ',
             'True',
@@ -618,6 +630,1844 @@ const CHALLENGES = [
             'if active:',
             '  print("on")',
             'print("debug")',
+        ],
+    },
+    {
+        name: 'Header & Footer',
+        hint: 'O opens a line above (type a header); G then o opens one at the very bottom for a footer',
+        start: [
+            'first',
+            'second',
+        ],
+        target: [
+            'HDR',
+            'first',
+            'second',
+            'FTR',
+        ],
+    },
+    {
+        name: 'Append the Unit',
+        hint: 'A appends at the end of a line — type the unit, Esc, then j and . to repeat',
+        start: [
+            '12',
+            '34',
+        ],
+        target: [
+            '12px',
+            '34px',
+        ],
+    },
+    {
+        name: 'Comment Out Each Line',
+        hint: 'I inserts at the first character — type // then a space, Esc, then j and .',
+        start: [
+            'x=1',
+            'y=2',
+        ],
+        target: [
+            '// x=1',
+            '// y=2',
+        ],
+    },
+    {
+        name: 'Kill the Asterisks',
+        hint: 'f* jumps to the next *, x deletes it, and ; hops to the following one',
+        start: [
+            'a*b*c*',
+        ],
+        target: [
+            'abc',
+        ],
+    },
+    {
+        name: 'Cut the First Word',
+        hint: '0 jumps to the line start, dw deletes the first word — then j and do it again',
+        start: [
+            'del keep',
+            'del keep2',
+        ],
+        target: [
+            'keep',
+            'keep2',
+        ],
+    },
+    {
+        name: 'Kill Two Dashes',
+        hint: 'f- jumps to the first dash, then 2x deletes two characters at once',
+        start: [
+            'x--y',
+            'z--w',
+        ],
+        target: [
+            'xy',
+            'zw',
+        ],
+    },
+    {
+        name: 'Erase to End',
+        hint: 'f/ finds the first slash, then D erases everything from there to the end',
+        start: [
+            'run//dbg',
+            'go//dbg2',
+        ],
+        target: [
+            'run',
+            'go',
+        ],
+    },
+    {
+        name: 'Swap the Operator',
+        hint: 'f+ finds the +, r replaces it with -, then j and . repeat it below',
+        start: [
+            'a + b',
+            'c + d',
+        ],
+        target: [
+            'a - b',
+            'c - d',
+        ],
+    },
+    {
+        name: 'Fix the Comparison',
+        hint: 'f< finds the <, r replaces it with > — 0 to reset before each line',
+        start: [
+            'if x<0',
+            'if y<0',
+        ],
+        target: [
+            'if x>0',
+            'if y>0',
+        ],
+    },
+    {
+        name: 'Normalize Punctuation',
+        hint: '$ jumps to the last character, r turns the comma into a semicolon',
+        start: [
+            'one,',
+            'two,',
+        ],
+        target: [
+            'one;',
+            'two;',
+        ],
+    },
+    {
+        name: 'Add Quotes Around a Word',
+        hint: 'i adds at the cursor, A adds at the end — wrap the whole word in quotes',
+        start: [
+            'alpha',
+        ],
+        target: [
+            '"alpha"',
+        ],
+    },
+    {
+        name: 'Delete Last Char Each Line',
+        hint: '$ jumps to the last character of a line, x deletes it — repeat per line',
+        start: [
+            'a1',
+            'b2',
+            'c3',
+        ],
+        target: [
+            'a',
+            'b',
+            'c',
+        ],
+    },
+    {
+        name: 'Parens Out Commas In',
+        hint: 'strip the outer parens first (x and $ x), then hunt each inner comma with f, x',
+        start: [
+            'sum(1, 2, 3)',
+        ],
+        target: [
+            'sum1 2 3',
+        ],
+    },
+    {
+        name: 'Wrap Then Indent',
+        hint: 'I adds ( at the start, A adds ) at the end, then >> indents the wrapped line',
+        start: [
+            'go()',
+        ],
+        target: [
+            '  (go())',
+        ],
+    },
+    {
+        name: 'Drop Args Keep Call',
+        hint: 'ci( changes the text inside the parens — type nothing to leave empty ()',
+        start: [
+            'log(msg)',
+            'log(msg2)',
+        ],
+        target: [
+            'log()',
+            'log()',
+        ],
+    },
+    {
+        name: 'Wrap the Line',
+        hint: 'I adds ( at the start, A adds ) at the end — wrap each line',
+        start: [
+            'say hi',
+            'go now',
+        ],
+        target: [
+            '(say hi)',
+            '(go now)',
+        ],
+    },
+    {
+        name: 'Two Ends Per Line',
+        hint: 'I prefixes a marker at the line start; A appends one at its end',
+        start: [
+            'note',
+            'note2',
+        ],
+        target: [
+            '> note <',
+            '> note2 <',
+        ],
+    },
+    {
+        name: 'Delete Three Chars',
+        hint: 'f# finds the first #, then 3x deletes three characters in a row',
+        start: [
+            'a###b',
+            'c$$$d',
+        ],
+        target: [
+            'ab',
+            'cd',
+        ],
+    },
+    {
+        name: 'Jump Words and Delete',
+        hint: '3w leaps three words ahead, then dw deletes the word you land on',
+        start: [
+            'a b c d e',
+        ],
+        target: [
+            'a b c e',
+        ],
+    },
+    {
+        name: 'Delete the Middle Token',
+        hint: 'f- jumps to the first dash, dt- deletes everything up to the next dash',
+        start: [
+            'a-mid-b',
+            'c-mid-d'
+        ],
+        target: [
+            'a-b',
+            'c-d'
+        ],
+    },
+    {
+        name: 'Strip a Trailing Comma',
+        hint: '$ jumps to the last character (the comma), x deletes it',
+        start: [
+            'a,',
+            'b,'
+        ],
+        target: [
+            'a',
+            'b'
+        ],
+    },
+    {
+        name: 'Delete Two Lines',
+        hint: '2dd deletes the current line and the one directly below it',
+        start: [
+            'a',
+            'x',
+            'y',
+            'b'
+        ],
+        target: [
+            'a',
+            'b'
+        ],
+    },
+    {
+        name: 'Edge-to-Edge Change',
+        hint: '0 jumps to the line start, C changes the whole line — type the new text',
+        start: [
+            'old',
+            'old2'
+        ],
+        target: [
+            'new',
+            'new'
+        ],
+    },
+    {
+        name: 'Indent by Motion',
+        hint: '>j indents the current line and the one below it (operator + motion)',
+        start: [
+            'a',
+            'b',
+            'c'
+        ],
+        target: [
+            '  a',
+            '  b',
+            'c'
+        ],
+    },
+    {
+        name: 'Yank Line Paste Above',
+        hint: 'yy copies the line, P pastes the copy ABOVE the cursor line',
+        start: [
+            'a',
+            'b'
+        ],
+        target: [
+            'a',
+            'a',
+            'b'
+        ],
+    },
+    {
+        name: 'Duplicate Twice',
+        hint: 'yy copies the line, then p p pastes two copies below it',
+        start: [
+            'a',
+            'b'
+        ],
+        target: [
+            'a',
+            'a',
+            'a',
+            'b'
+        ],
+    },
+    {
+        name: 'Delete Back a Word',
+        hint: 'w moves onto a word, db deletes backwards to the start of the line',
+        start: [
+            'one two'
+        ],
+        target: [
+            'two'
+        ],
+    },
+    {
+        name: 'Wrap Inner in Quotes',
+        hint: 'f( finds the paren, ci( changes inside it — retype the value wrapped in quotes',
+        start: [
+            'x(abc)'
+        ],
+        target: [
+            'x("abc")'
+        ],
+    },
+    {
+        name: 'Goto Absolute Line',
+        hint: '3G jumps straight to line 3, cc changes that whole line',
+        start: [
+            '1',
+            '2',
+            '3'
+        ],
+        target: [
+            '1',
+            '2',
+            'X'
+        ],
+    },
+    {
+        name: 'Empty All Quotes',
+        hint: 'ci" changes the text inside the quotes — type nothing to leave them empty',
+        start: [
+            'a="x"',
+            'b="y"'
+        ],
+        target: [
+            'a=""',
+            'b=""'
+        ],
+    },
+    {
+        name: 'Counted Find',
+        hint: '2f. jumps straight to the SECOND dot, then x deletes it',
+        start: [
+            'a.b.c'
+        ],
+        target: [
+            'a.bc'
+        ],
+    },
+    {
+        name: 'Multi-delete One Key',
+        hint: 'd5w deletes five words in a single command',
+        start: [
+            'a b c d e f'
+        ],
+        target: [
+            'f'
+        ],
+    },
+    {
+        name: 'Find Char, Replace It',
+        hint: 'f% finds the percent sign, then r replaces it with $',
+        start: [
+            'a%b',
+            'c%d'
+        ],
+        target: [
+            'a$b',
+            'c$d'
+        ],
+    },
+    {
+        name: 'Two Different Rs',
+        hint: 'f? then rX on the first line, f! then rY on the second',
+        start: [
+            'a?b',
+            'c!d'
+        ],
+        target: [
+            'aXb',
+            'cYd'
+        ],
+    },
+    {
+        name: 'Change Inside parens',
+        hint: 'f( then ci( to change the value inside, then j and . to repeat',
+        start: [
+            'f(1)',
+            'f(1)'
+        ],
+        target: [
+            'f(2)',
+            'f(2)'
+        ],
+    },
+    {
+        name: 'Dedent a Line',
+        hint: '<< removes one indent level — j and . to dedent the next lines',
+        start: [
+            'if:',
+            '  in',
+            '  in2'
+        ],
+        target: [
+            'if:',
+            'in',
+            'in2'
+        ],
+    },
+    {
+        name: 'Around Parens',
+        hint: 'f( then da( deletes the whole parenthesized group, parens included',
+        start: [
+            'fn(x)'
+        ],
+        target: [
+            'fn'
+        ],
+    },
+    {
+        name: 'Change in Quotes',
+        hint: 'f" finds the opening quote, ci" changes just the text inside it',
+        start: [
+            'a="x"'
+        ],
+        target: [
+            'a="y"'
+        ],
+    },
+    {
+        name: 'Delete a Whole WORD',
+        hint: 'w hops onto the dotted WORD, daW deletes it with its trailing space',
+        start: [
+            'say a.b end',
+        ],
+        target: [
+            'say end',
+        ],
+    },
+    {
+        name: 'Empty the Baskets',
+        hint: 'f{ jumps to a brace, di{ empties it — repeat for the next one on the line',
+        start: [
+            'x{1} y{2}',
+        ],
+        target: [
+            'x{} y{}',
+        ],
+    },
+    {
+        name: 'Yank Word Paste Before',
+        hint: 'yiw yanks the word under the cursor, P pastes it just before',
+        start: [
+            'ab cd',
+        ],
+        target: [
+            'abab cd',
+        ],
+    },
+    {
+        name: 'Prepend a Marker',
+        hint: 'I inserts at the first character — type a dash and space, Esc, then j and .',
+        start: [
+            'one',
+            'two',
+        ],
+        target: [
+            '- one',
+            '- two',
+        ],
+    },
+    {
+        name: 'Quote Plus Comma',
+        hint: 'I adds an opening quote at the start, A adds the closing quote and a comma',
+        start: [
+            'x',
+            'y',
+        ],
+        target: [
+            '"x",',
+            '"y",',
+        ],
+    },
+    {
+        name: 'Capitalize First Letter',
+        hint: 'r replaces the first letter with its capital at the line start',
+        start: [
+            'alpha',
+            'beta',
+        ],
+        target: [
+            'Alpha',
+            'Beta',
+        ],
+    },
+    {
+        name: 'Empty Inner Of Two',
+        hint: 'f( twice jumps to the second ( , then ci( to set its value',
+        start: [
+            'a(1) b(2)',
+        ],
+        target: [
+            'a(1) b(9)',
+        ],
+    },
+    {
+        name: 'Delete To Previous Word',
+        hint: 'w twice onto the last word, then d0 erases from the cursor to the line start',
+        start: [
+            'one two three',
+        ],
+        target: [
+            'three',
+        ],
+    },
+    {
+        name: 'Change Word Then Wrap',
+        hint: 'ciw changes the whole word — retype it wrapped in quotes',
+        start: [
+            'var = old',
+        ],
+        target: [
+            'var = "new"',
+        ],
+    },
+    {
+        name: 'Delete First Two Words',
+        hint: 'd2w deletes two words at once from the cursor',
+        start: [
+            'alpha beta gamma',
+        ],
+        target: [
+            'gamma',
+        ],
+    },
+    {
+        name: 'Indent Two Then Dot',
+        hint: '2>> indents two lines together',
+        start: [
+            'a',
+            'b',
+            'c',
+        ],
+        target: [
+            '  a',
+            '  b',
+            'c',
+        ],
+    },
+    {
+        name: 'Delete Back Two Words',
+        hint: 'd2b deletes back over two words from the cursor',
+        start: [
+            'one two three',
+        ],
+        target: [
+            'three',
+        ],
+    },
+    {
+        name: 'Unquote Then Capitalize',
+        hint: 'x deletes the opening quote, $ x the closing, then r capitalizes',
+        start: [
+            '"cat"',
+            '"dog"',
+        ],
+        target: [
+            'Cat',
+            'Dog',
+        ],
+    },
+    {
+        name: 'Delete Inner Change Outer',
+        hint: 'f( then ci( replaces the args; the parentheses stay put',
+        start: [
+            'add(2, 3)',
+        ],
+        target: [
+            'add(5)',
+        ],
+    },
+    {
+        name: 'Move Up Then Repeat',
+        hint: 'do an edit, count down with Nj, then . to apply it there too',
+        start: [
+            'x',
+            'y',
+            'z',
+            'w',
+        ],
+        target: [
+            'X',
+            'y',
+            'z',
+            'X',
+        ],
+    },
+    {
+        name: 'Replace Tilde Twice',
+        hint: 'r overwrites each path separator one at a time',
+        start: [
+            'a/b',
+        ],
+        target: [
+            'a:b',
+        ],
+    },
+    {
+        name: 'Drop the Trailing Mark',
+        hint: '$ jumps to the last character, x deletes it',
+        start: [
+            'a*',
+            'b*',
+        ],
+        target: [
+            'a',
+            'b',
+        ],
+    },
+    {
+        name: 'Drop Three Lead Dots',
+        hint: '0 goes to the start, then 3x deletes the three dots',
+        start: [
+            '...x',
+            '...y',
+        ],
+        target: [
+            'x',
+            'y',
+        ],
+    },
+    {
+        name: 'Delete a Char Span',
+        hint: 'd3l deletes three characters to the right of the cursor',
+        start: [
+            'abcXde',
+        ],
+        target: [
+            'Xde',
+        ],
+    },
+    {
+        name: 'Open Type Dot',
+        hint: 'o opens a line and types text, then . repeats the same insertion below',
+        start: [
+            'a',
+            'z',
+        ],
+        target: [
+            'a',
+            'hi',
+            'hi',
+            'z',
+        ],
+    },
+    {
+        name: 'Hunt the Last Comma',
+        hint: '$ jumps to the end, F, finds the last comma, x deletes it',
+        start: [
+            'a,b,c',
+        ],
+        target: [
+            'a,bc',
+        ],
+    },
+    {
+        name: 'Around Braces',
+        hint: 'f{ then da{ deletes the braces and everything inside',
+        start: [
+            'x{1}',
+        ],
+        target: [
+            'x',
+        ],
+    },
+    {
+        name: 'Around Brackets',
+        hint: 'f[ then da[ deletes the brackets and everything inside',
+        start: [
+            'x[1]',
+        ],
+        target: [
+            'x',
+        ],
+    },
+    {
+        name: 'Inner Brackets',
+        hint: 'f[ then di[ deletes only what is inside the brackets',
+        start: [
+            'x[1]',
+        ],
+        target: [
+            'x[]',
+        ],
+    },
+    {
+        name: 'Inner Braces',
+        hint: 'f{ then di{ deletes only what is inside the braces',
+        start: [
+            'x{1}',
+        ],
+        target: [
+            'x{}',
+        ],
+    },
+    {
+        name: 'Around Angle Delete',
+        hint: 'd a < deletes an <angle> pair including the brackets',
+        start: [
+            'a<b>c',
+        ],
+        target: [
+            'ac',
+        ],
+    },
+    {
+        name: 'Change Line End',
+        hint: 'f= then l steps past the equals, C changes the rest of the line',
+        start: [
+            'a=old',
+            'b=old',
+        ],
+        target: [
+            'a=9',
+            'b=9',
+        ],
+    },
+    {
+        name: 'Move a Block Down',
+        hint: '2dd cuts two lines, j moves down, p pastes them back',
+        start: [
+            'a',
+            'b',
+            'c',
+            'd',
+        ],
+        target: [
+            'c',
+            'd',
+            'a',
+            'b',
+        ],
+    },
+    {
+        name: 'Blank Separator',
+        hint: 'o opens a line below, then an immediate Esc leaves a blank separator',
+        start: [
+            'a',
+            'b',
+        ],
+        target: [
+            'a',
+            '',
+            'b',
+        ],
+    },
+    {
+        name: 'Inner Word Delete',
+        hint: 'diw deletes just the word, leaving the spaces behind',
+        start: [
+            'ab cd',
+        ],
+        target: [
+            ' cd',
+        ],
+    },
+    {
+        name: 'Around Word Delete',
+        hint: 'daw deletes the word plus the space around it',
+        start: [
+            'ab cd',
+        ],
+        target: [
+            'cd',
+        ],
+    },
+    {
+        name: 'Inner WORD',
+        hint: 'diW deletes the whole dotted WORD, not just a piece of it',
+        start: [
+            'a b.c d',
+        ],
+        target: [
+            'a  d',
+        ],
+    },
+    {
+        name: 'Around WORD',
+        hint: 'daW deletes the dotted WORD and its trailing space',
+        start: [
+            'a b.c d',
+        ],
+        target: [
+            'a d',
+        ],
+    },
+    {
+        name: 'Inner Only',
+        hint: 'f( then di( deletes only the arguments inside the parentheses',
+        start: [
+            'f(x)',
+        ],
+        target: [
+            'f()',
+        ],
+    },
+    {
+        name: 'Brace Body Wipe',
+        hint: 'f{ then di{ empties the contents of the braces',
+        start: [
+            'f{1}',
+        ],
+        target: [
+            'f{}',
+        ],
+    },
+    {
+        name: 'Bracket List Wipe',
+        hint: 'f[ then di[ empties the contents of the brackets',
+        start: [
+            'f[1]',
+        ],
+        target: [
+            'f[]',
+        ],
+    },
+    {
+        name: 'Delete Around Quotes',
+        hint: 'f" then da" deletes the quotes and the text inside',
+        start: [
+            'a="x"',
+        ],
+        target: [
+            'a=',
+        ],
+    },
+    {
+        name: 'Add to Inner Parens',
+        hint: 'ci( changes the args so you can add a second one',
+        start: [
+            'g(1)',
+        ],
+        target: [
+            'g(1, 2)',
+        ],
+    },
+    {
+        name: 'Double Text-Object Line',
+        hint: 'wipe the contents of both the { } and the ( ) on one line',
+        start: [
+            'a{1} b(2)',
+        ],
+        target: [
+            'a{} b()',
+        ],
+    },
+    {
+        name: 'Find Not Into',
+        hint: 'dt, deletes up to but not onto the comma',
+        start: [
+            'x, y',
+        ],
+        target: [
+            ', y',
+        ],
+    },
+    {
+        name: 'Find Onto Delete',
+        hint: 'df, deletes through the comma itself',
+        start: [
+            'x, y',
+        ],
+        target: [
+            ' y',
+        ],
+    },
+    {
+        name: 'Change to Word End',
+        hint: 'ce changes from the cursor to the end of the word',
+        start: [
+            'ab cd',
+        ],
+        target: [
+            'X cd',
+        ],
+    },
+    {
+        name: 'Change One Word Only',
+        hint: 'w then ciw changes just the second word',
+        start: [
+            'a b',
+        ],
+        target: [
+            'a X',
+        ],
+    },
+    {
+        name: 'Change Middle Word',
+        hint: 'ciw on the middle word leaves the neighbors alone',
+        start: [
+            'a b c',
+        ],
+        target: [
+            'a X c',
+        ],
+    },
+    {
+        name: 'Collapse Two Words',
+        hint: 'w then dw deletes the middle word',
+        start: [
+            'a b c',
+        ],
+        target: [
+            'a c',
+        ],
+    },
+    {
+        name: 'Last-Line Edit',
+        hint: 'G goes to the last line, cc changes that whole line',
+        start: [
+            'a',
+            'z',
+        ],
+        target: [
+            'a',
+            'Z',
+        ],
+    },
+    {
+        name: 'URL Query Trim',
+        hint: 'f? finds the query marker, D deletes it and everything after',
+        start: [
+            'http://x?y=1',
+        ],
+        target: [
+            'http://x',
+        ],
+    },
+    {
+        name: 'Delete the Group',
+        hint: 'f( then d% deletes the whole parenthesized group',
+        start: [
+            'f(a)',
+        ],
+        target: [
+            'f',
+        ],
+    },
+    {
+        name: 'Inner Backtick',
+        hint: 'f` then ci` changes the text inside the backticks',
+        start: [
+            'a=`x`',
+        ],
+        target: [
+            'a=`y`',
+        ],
+    },
+    {
+        name: 'Change the Group',
+        hint: 'f( then c% changes the whole group — retype what replaces it',
+        start: [
+            'f(a)b',
+        ],
+        target: [
+            'fnb',
+        ],
+    },
+    {
+        name: 'Delete to Match Backward',
+        hint: 'f) lands on the closer, d% deletes back through the opener',
+        start: [
+            'f(a)x',
+        ],
+        target: [
+            'fx',
+        ],
+    },
+    {
+        name: 'Inner Single-Quote',
+        hint: 'f\' then ci\' changes the text inside single quotes',
+        start: [
+            'a=\'x\'',
+        ],
+        target: [
+            'a=\'y\'',
+        ],
+    },
+    {
+        name: 'Quote vs Word Quiz',
+        hint: 'di" deletes the string contents but keeps the quotes',
+        start: [
+            'say "hi"',
+        ],
+        target: [
+            'say ""',
+        ],
+    },
+    {
+        name: 'Delete Every Bracket Content',
+        hint: 'f{ then di{ empties a brace, j and . do the next line',
+        start: [
+            'x{1}',
+            'y{2}',
+        ],
+        target: [
+            'x{}',
+            'y{}',
+        ],
+    },
+    {
+        name: 'Substitute Line',
+        hint: 'S erases the whole line and lets you retype it',
+        start: [
+            'a',
+            'b',
+        ],
+        target: [
+            'X',
+            'X',
+        ],
+    },
+    {
+        name: 'Triple-line Replace',
+        hint: '3cc changes three lines at once into one new line',
+        start: [
+            'a',
+            'b',
+            'c',
+            'd',
+        ],
+        target: [
+            'sum',
+            'd',
+        ],
+    },
+    {
+        name: 'Yank Two Lines',
+        hint: '2yy yanks two lines, P pastes the pair above the cursor',
+        start: [
+            'a',
+            'b',
+            'c',
+        ],
+        target: [
+            'a',
+            'b',
+            'a',
+            'b',
+            'c',
+        ],
+    },
+    {
+        name: 'Align a List',
+        hint: '>> indents the current line, then j and . indent the rest of the list',
+        start: [
+            'a:',
+            '- x',
+            '- y',
+        ],
+        target: [
+            'a:',
+            '  - x',
+            '  - y',
+        ],
+    },
+    {
+        name: 'Indent the Middle Line',
+        hint: 'j down one line, then >> to indent just that one',
+        start: [
+            'a',
+            'b',
+            'c',
+        ],
+        target: [
+            'a',
+            '  b',
+            'c',
+        ],
+    },
+    {
+        name: 'Dedent Last Line',
+        hint: 'G goes to the last line, << removes one indent level',
+        start: [
+            '  a',
+            '  b',
+        ],
+        target: [
+            '  a',
+            'b',
+        ],
+    },
+    {
+        name: 'Delete 3 Lines',
+        hint: '3dd deletes three lines at once',
+        start: [
+            'a',
+            'b',
+            'c',
+            'd',
+        ],
+        target: [
+            'd',
+        ],
+    },
+    {
+        name: 'Indent 2',
+        hint: '2>> indents two lines together',
+        start: [
+            'a',
+            'b',
+            'c',
+        ],
+        target: [
+            '  a',
+            '  b',
+            'c',
+        ],
+    },
+    {
+        name: 'Replace 2 Chars',
+        hint: 'f= then 2r# overwrites both equals signs at once',
+        start: [
+            'a==b',
+        ],
+        target: [
+            'a##b',
+        ],
+    },
+    {
+        name: 'First Line Edit',
+        hint: 'gg jumps to the first line, cc changes it',
+        start: [
+            'z',
+            'w',
+        ],
+        target: [
+            'Z',
+            'w',
+        ],
+    },
+    {
+        name: 'Middle Edit',
+        hint: 'j moves down to the middle line, cc changes just that line',
+        start: [
+            'a',
+            'b',
+            'c',
+        ],
+        target: [
+            'a',
+            'B',
+            'c',
+        ],
+    },
+    {
+        name: 'Semilons Everywhere',
+        hint: 'A appends a semicolon, then j and . repeat it down every line',
+        start: [
+            'x=1',
+            'y=2',
+            'z=3',
+        ],
+        target: [
+            'x=1;',
+            'y=2;',
+            'z=3;',
+        ],
+    },
+    {
+        name: 'Bullet a List',
+        hint: 'I inserts a bullet at the start, then j and . repeat',
+        start: [
+            'one',
+            'two',
+            'three',
+        ],
+        target: [
+            '- one',
+            '- two',
+            '- three',
+        ],
+    },
+    {
+        name: 'Close Every Call',
+        hint: 'A appends the closing paren, then j and . fix each call',
+        start: [
+            'f(x',
+            'g(y',
+        ],
+        target: [
+            'f(x)',
+            'g(y)',
+        ],
+    },
+    {
+        name: 'Indent-and-repeat',
+        hint: '>> indents the line, then j and . indent each following line',
+        start: [
+            'a',
+            'b',
+            'c',
+        ],
+        target: [
+            '  a',
+            '  b',
+            '  c',
+        ],
+    },
+    {
+        name: 'Empty-and-repeat',
+        hint: 'ci" empties a string, then j and . empty the next ones',
+        start: [
+            'a="x"',
+            'b="y"',
+        ],
+        target: [
+            'a=""',
+            'b=""',
+        ],
+    },
+    {
+        name: 'Delete-word-and-repeat',
+        hint: '0 dw deletes the first word, then j and . repeat',
+        start: [
+            'del a',
+            'del b',
+        ],
+        target: [
+            'a',
+            'b',
+        ],
+    },
+    {
+        name: 'Double Dot',
+        hint: 'change one line, then j and . to apply the same change down',
+        start: [
+            'a',
+            'b',
+            'c',
+        ],
+        target: [
+            'X',
+            'X',
+            'X',
+        ],
+    },
+    {
+        name: 'Strip HTML Tag',
+        hint: 'd a < deletes an <angle> tag, leaving the text',
+        start: [
+            'p<x>q',
+        ],
+        target: [
+            'pq',
+        ],
+    },
+    {
+        name: 'Version Bump',
+        hint: 'f. finds the dot, l steps onto the patch digit, r replaces it',
+        start: [
+            'v1.0',
+        ],
+        target: [
+            'v1.9',
+        ],
+    },
+    {
+        name: 'Purge Debug Lines',
+        hint: 'j moves to the debug line, dd deletes it',
+        start: [
+            'keep',
+            'dbg',
+            'keep2',
+        ],
+        target: [
+            'keep',
+            'keep2',
+        ],
+    },
+    {
+        name: 'At End Of Line',
+        hint: '$ jumps to the last character, then x deletes it',
+        start: [
+            'ab',
+        ],
+        target: [
+            'a',
+        ],
+    },
+    {
+        name: 'Empty All Fill One',
+        hint: 'f= l cw changes the value on the first line only',
+        start: [
+            'a=1',
+            'b=1',
+        ],
+        target: [
+            'a=0',
+            'b=1',
+        ],
+    },
+    {
+        name: 'Cursor-at-End Replace',
+        hint: '$ jumps to the last character, r replaces it',
+        start: [
+            'abc',
+        ],
+        target: [
+            'abX',
+        ],
+    },
+    {
+        name: 'Last Line First Word',
+        hint: 'G goes to the last line, 0 to its start, ciw changes the first word',
+        start: [
+            'a',
+            'b',
+        ],
+        target: [
+            'a',
+            'X',
+        ],
+    },
+    {
+        name: 'Re-quote with Escape',
+        hint: 'f\' finds the quote, r replaces it with a double quote',
+        start: [
+            'a\'b',
+        ],
+        target: [
+            'a"b',
+        ],
+    },
+    {
+        name: 's to a Longer Word',
+        hint: 's deletes the char under the cursor and starts typing — type a longer word',
+        start: [
+            'a b c',
+        ],
+        target: [
+            'AX b c',
+        ],
+    },
+    {
+        name: 'Walk Down Editing',
+        hint: 'edit a line, j down, then edit the next one separately',
+        start: [
+            'a',
+            'b',
+        ],
+        target: [
+            'X',
+            'Y',
+        ],
+    },
+    {
+        name: 'Jump by Count',
+        hint: '3j jumps straight down three lines, then cc changes that line',
+        start: [
+            'a',
+            'b',
+            'c',
+            'd',
+        ],
+        target: [
+            'a',
+            'b',
+            'c',
+            'X',
+        ],
+    },
+    {
+        name: 'Delete to Previous Word',
+        hint: 'w lands on a word, db deletes the word before it',
+        start: [
+            'one two three',
+        ],
+        target: [
+            'one three',
+        ],
+    },
+    {
+        name: 'Change Previous Word',
+        hint: 'w w then db leaves the last word, so 0 walk: w then be ciw renames',
+        start: [
+            'alpha beta',
+        ],
+        target: [
+            'alpha X',
+        ],
+    },
+    {
+        name: 'Yank Whole Line',
+        hint: 'Y copies the whole line, p pastes a duplicate below',
+        start: [
+            'a',
+            'b',
+        ],
+        target: [
+            'a',
+            'a',
+            'b',
+        ],
+    },
+    {
+        name: 'Delete Line End',
+        hint: 'f/ then D deletes from the comment marker to the line end',
+        start: [
+            'x=1 // note',
+        ],
+        target: [
+            'x=1 ',
+        ],
+    },
+    {
+        name: 'Delete up to a Word',
+        hint: 'dtX deletes everything up to (not into) the letter X',
+        start: [
+            'abcX',
+        ],
+        target: [
+            'X',
+        ],
+    },
+    {
+        name: 'Token After the Dot',
+        hint: 'f. finds the dot, l steps onto the next token, x deletes it',
+        start: [
+            'a.b',
+        ],
+        target: [
+            'a.',
+        ],
+    },
+    {
+        name: 'Start-Delete',
+        hint: '0 to the line start, then d2w deletes the first two words',
+        start: [
+            'one two x',
+        ],
+        target: [
+            'x',
+        ],
+    },
+    {
+        name: 'Remove the Equals',
+        hint: 'f= finds the equals sign, then x deletes it',
+        start: [
+            'a=1',
+        ],
+        target: [
+            'a1',
+        ],
+    },
+    {
+        name: 'Delete a Whole Line',
+        hint: 'j steps to the line to remove, then dd deletes it',
+        start: [
+            'a',
+            'b',
+            'c',
+        ],
+        target: [
+            'a',
+            'c',
+        ],
+    },
+    {
+        name: 'Both-Edge Delete',
+        hint: 'x deletes the leading char, then $ x deletes the trailing one',
+        start: [
+            '(a)',
+            '(b)',
+        ],
+        target: [
+            'a',
+            'b',
+        ],
+    },
+    {
+        name: 'Wrap Line Then Duplicate',
+        hint: 'I and A wrap the line in parens, then yy p duplicates it',
+        start: [
+            'a',
+        ],
+        target: [
+            '(a)',
+            '(a)',
+        ],
+    },
+    {
+        name: 'Strip Suffix Wrap Residual',
+        hint: 'f_ then D drops the suffix, then I and A wrap what remains',
+        start: [
+            'data_suffix',
+        ],
+        target: [
+            '(data)',
+        ],
+    },
+    {
+        name: 'Delete Token-After-Delimiter',
+        hint: 'f: finds the delimiter, l steps onto the token, daw deletes it',
+        start: [
+            'a:bb c',
+        ],
+        target: [
+            'a:c',
+        ],
+    },
+    {
+        name: 'Strip Fixed Line Numbers',
+        hint: '0 to the start, then 2x removes the digit and its space',
+        start: [
+            '1 a',
+            '2 b',
+        ],
+        target: [
+            'a',
+            'b',
+        ],
+    },
+    {
+        name: 'Quote the Whole Line',
+        hint: '0 I" adds an opening quote, $ A" closes the whole line',
+        start: [
+            'say',
+            'go',
+        ],
+        target: [
+            '"say"',
+            '"go"',
+        ],
+    },
+    {
+        name: 'Swap Quote Style',
+        hint: 'f\' then r" swaps the first quote, ; r" swaps the next',
+        start: [
+            'a=\'x\'',
+        ],
+        target: [
+            'a="x"',
+        ],
+    },
+    {
+        name: 'Find-Angled, Kill-Inner',
+        hint: 'f< jumps to the tag, di< wipes its inner text',
+        start: [
+            'a<b>c',
+        ],
+        target: [
+            'a<>c',
+        ],
+    },
+    {
+        name: 'Append Space + Word',
+        hint: 'A appends a space and a new word at the end of the line',
+        start: [
+            'hi',
+        ],
+        target: [
+            'hi there',
+        ],
+    },
+    {
+        name: 'Suffix Last Line Only',
+        hint: 'G jumps to the last line, then A appends text there only',
+        start: [
+            'a',
+            'last',
+        ],
+        target: [
+            'a',
+            'last!',
+        ],
+    },
+    {
+        name: 'Indent a Body',
+        hint: '>> indents a body line, then j and . indent each following one',
+        start: [
+            'if:',
+            'x',
+            'y',
+        ],
+        target: [
+            'if:',
+            '  x',
+            '  y',
+        ],
+    },
+    {
+        name: 'Change in Parens',
+        hint: 'f( then ci( changes each argument, j and . repeat',
+        start: [
+            'f(1)',
+            'f(1)',
+        ],
+        target: [
+            'f(2)',
+            'f(2)',
+        ],
+    },
+    {
+        name: 'Empty Pair No-Op',
+        hint: 'ci( on empty () has nothing to delete, so it just types inside',
+        start: [
+            'f()',
+        ],
+        target: [
+            'f(x)',
+        ],
+    },
+    {
+        name: 'Bullet Items Drill',
+        hint: 'I inserts a bullet, Esc, then j and . repeat it down the list',
+        start: [
+            'a',
+            'b',
+            'c',
+        ],
+        target: [
+            '- a',
+            '- b',
+            '- c',
+        ],
+    },
+    {
+        name: 'CSV Header Title',
+        hint: '0 then ciw changes just the first header field',
+        start: [
+            'id,name',
+        ],
+        target: [
+            'ID,name',
+        ],
+    },
+    {
+        name: 'Skip-To and Delete',
+        hint: 'w w skips two words, then dw deletes the one you land on',
+        start: [
+            'a b c d',
+        ],
+        target: [
+            'a b d',
+        ],
+    },
+    {
+        name: 'Trim Tail Fix Head',
+        hint: '0 then df| drops the head field, then f| D drops the tail',
+        start: [
+            'A|mid|DROP',
+        ],
+        target: [
+            'mid',
+        ],
+    },
+    {
+        name: 'Import De-dupe',
+        hint: 'j to the duplicate line, then dd deletes it',
+        start: [
+            'import a',
+            'import a',
+            'use',
+        ],
+        target: [
+            'import a',
+            'use',
+        ],
+    },
+    {
+        name: 'Config Key Rename',
+        hint: 'ciw on the key renames it while the value stays',
+        start: [
+            'port=80',
+        ],
+        target: [
+            'host=80',
+        ],
+    },
+    {
+        name: 'Camel Snake',
+        hint: 'fV finds the capital, i inserts an underscore to make it snake_case',
+        start: [
+            'myVar',
+        ],
+        target: [
+            'my_Var',
+        ],
+    },
+    {
+        name: 'Past The End',
+        hint: '5G clamps to the last real line, then cc changes it',
+        start: [
+            'a',
+        ],
+        target: [
+            'X',
+        ],
+    },
+    {
+        name: 'Every Third Row',
+        hint: '2j jumps every other line, editing the ones you land on',
+        start: [
+            'a',
+            'b',
+            'c',
+            'd',
+            'e',
+        ],
+        target: [
+            'a',
+            'b',
+            'C',
+            'd',
+            'E',
+        ],
+    },
+    {
+        name: 'Ping-Pong',
+        hint: 'G edits the bottom line, gg jumps back to edit the top',
+        start: [
+            'a',
+            'z',
+        ],
+        target: [
+            'A',
+            'Z',
+        ],
+    },
+    {
+        name: 'Quote Pair Then Body',
+        hint: 'i adds the opening quote, A adds the closing quote',
+        start: [
+            'word',
+        ],
+        target: [
+            '"word"',
+        ],
+    },
+    {
+        name: 'Delete Count-Span',
+        hint: 'd4l deletes four characters to the right of the cursor',
+        start: [
+            'abcdef',
+        ],
+        target: [
+            'ef',
+        ],
+    },
+    {
+        name: 'CSV Column Drop',
+        hint: 'f, finds a comma, dt, deletes the field up to the next comma',
+        start: [
+            'a,b,c',
+        ],
+        target: [
+            'a,c',
+        ],
+    },
+    {
+        name: 'Quote The Keys',
+        hint: 'I adds an opening quote, then f: and i add the closing one',
+        start: [
+            'key: 1',
+        ],
+        target: [
+            '"key": 1',
+        ],
+    },
+    {
+        name: 'Indent Then Wrap',
+        hint: '>> indents the line, then I and A wrap it in parens',
+        start: [
+            'x',
+        ],
+        target: [
+            '  (x)',
+        ],
+    },
+    {
+        name: 'Dedent by Motion',
+        hint: '0 then <j dedents the current line and the next',
+        start: [
+            '  a',
+            '  b',
+        ],
+        target: [
+            'a',
+            'b',
+        ],
+    },
+    {
+        name: 'K-walk Reverse Edit',
+        hint: 'edit the lower line, then k back up to edit the upper one',
+        start: [
+            'x',
+            'y',
+        ],
+        target: [
+            'X',
+            'Y',
+        ],
+    },
+    {
+        name: 'Change-then-skip',
+        hint: 'ci( changes a value, then jump down two lines and . to skip one',
+        start: [
+            'f(1)',
+            'SKIP',
+            'f(1)',
+        ],
+        target: [
+            'f(2)',
+            'SKIP',
+            'f(2)',
         ],
     },
 ];
@@ -3109,8 +4959,27 @@ function renderReference() {
     }
 }
 
+// --- Caps Lock banner ---
+// Browsers don't emit a dedicated "caps lock changed" event, so we check
+// `getModifierState('CapsLock')` on every keydown and keyup. This catches
+// toggles instantly (the very next keystroke updates the banner) and works
+// cross-platform.
+function updateCapsWarning(e) {
+    const banner = document.getElementById('caps-warning');
+    if (!banner) return;
+    let on = false;
+    if (e && typeof e.getModifierState === 'function') {
+        try { on = e.getModifierState('CapsLock') === true; } catch (_) { on = false; }
+    }
+    if (on) banner.classList.add('show');
+    else banner.classList.remove('show');
+}
+
 // --- Key Dispatcher ---
 function handleKeyDown(e) {
+    // Caps Lock detection — must run before any early return, since Vim
+    // commands are case-sensitive and caps lock silently breaks them.
+    updateCapsWarning(e);
     // Let the challenge dropdown (or any form control) keep native key handling.
     if (e.target && (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT')) return;
     // Ctrl+R = redo (only Ctrl binding we intercept; everything else passes through to browser)
@@ -3180,6 +5049,9 @@ function init() {
     terminal.tabIndex = 0;
     terminal.focus();
     document.addEventListener('keydown', handleKeyDown);
+    // keyup also refreshes the caps-lock banner so a lone CapsLock tap
+    // (which returns early from handleKeyDown) still updates the UI.
+    document.addEventListener('keyup', updateCapsWarning);
 }
 
 // Only auto-init in the browser. In Node (test runner) skip DOM setup.
@@ -3226,6 +5098,7 @@ if (typeof module !== 'undefined' && module.exports) {
         handleInsertKey,
         handleTextObjectKey,
         handleKeyDown,
+        updateCapsWarning,
         CHALLENGES,
         initChallenge,
         computeDiff,
